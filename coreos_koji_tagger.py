@@ -166,7 +166,7 @@ class Consumer(object):
         cp = subprocess.run(cmd.split(' '), check=True)
 
 
-def grab_first_column(text):
+def grab_first_column(text: str) -> list:
     # The output is split by newlines (split \n) and contains an 
     # extra newline  at the end (rstrip). We only care about the 1st
     # column (split(' ')[0]) so just grab that and return a list.
@@ -174,7 +174,7 @@ def grab_first_column(text):
     return [b.split(' ')[0] for b in lines]
 
 
-def get_tagged_builds(tag):
+def get_tagged_builds(tag: str) -> list:
     if not tag:
         raise
 
@@ -191,7 +191,7 @@ def get_tagged_builds(tag):
     cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
-def get_pkgs_in_tag(tag):
+def get_pkgs_in_tag(tag: str) -> list:
     if not tag:
         raise
     # Usage: koji list-pkgs [options]
@@ -199,7 +199,7 @@ def get_pkgs_in_tag(tag):
     cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
-def tag_builds(tag, builds):
+def tag_builds(tag: bool, builds: list):
     if not tag or not builds:
         raise
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
@@ -207,7 +207,7 @@ def tag_builds(tag, builds):
     cmd.extend(builds)
     cp = subprocess.run(cmd, check=True)
 
-def add_pkgs_to_tag(tag, pkgs, owner):
+def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     if not tag or not pkgs or not owner:
         raise
     # Usage: koji add-pkg [options] tag package [package2 ...]
