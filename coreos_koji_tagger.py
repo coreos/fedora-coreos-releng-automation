@@ -111,7 +111,7 @@ class Consumer(object):
         desired = {'kernel-5.0.17-300.fc30', 'coreos-installer-0-5.gitd3fc540.fc30', 'cowsay-3.04-12.fc30'}
 
         # Grab the list of packages that can be tagged into the tag
-        pkgs = get_pkgs_in_tag(self.tag)
+        pkgsintag = get_pkgs_in_tag(self.tag)
 
         # Grab the currently tagged builds and convert it into a set
         current = set(get_tagged_builds(self.tag))
@@ -119,11 +119,14 @@ class Consumer(object):
         # Find out the difference between the current set of builds
         # that exist in the koji tag and the desired set of builds to
         # be added to the koji tag.
-        totag = desired.difference(current)
-        #print(totag)
+        buildstotag = list(desired.difference(current))
 
-        for build in totag:
-            logger.info(f'{build}')
+
+        # compute the package names of each build and determine whether
+        # it is in the tag or not. If not we'll need to add the package
+        # to the tag before we can add the specific build to the tag
+        pkgstoadd = []
+        for build in buildstotag:
 
             # Find the some defining information for this build.
             # Take the first item from the list returned by possibilites func
@@ -135,16 +138,24 @@ class Consumer(object):
             print(buildinfo.release)
             print(buildinfo.arch)
 
-
             # Check to see if the package is already covered by the tag
-            #if i.name 
-            if buildinfo.name not in pkgs:
-                add_pkg_to_tag(tag=self.tag,
-                               pkg=buildinfo.name,
-                               owner=self.koji_user)
+            if buildinfo.name not in pkgsintag:
+                pkgstoadd.append(buildinfo.name)
 
-            # Perform the tagging
-            tag_build(tag=self.tag, build=build)
+
+        # Add the needed packages to the tag if we have credentials
+        if pkgstoadd:
+            logger.info(f'Adding packages to tag: {pkgstoadd}')
+            if self.keytab_file:
+                add_pkgs_to_tag(tag=self.tag,
+                                pkgs=pkgstoadd,
+                                owner=self.koji_user)
+
+        # Perform the tagging if we have credentials
+        if buildstotag:
+            logger.info(f'Tagging builds into tag: {buildstotag}')
+            if self.keytab_file:
+                tag_builds(tag=self.tag, builds=buildstotag)
 
 #       if self.token:
 #           self.pg.create_issue(title=title, content=content)
@@ -188,18 +199,20 @@ def get_pkgs_in_tag(tag):
     cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
-def tag_build(tag, build):
-    if not tag or not build:
+def tag_builds(tag, builds):
+    if not tag or not builds:
         raise
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
-    cmd = f'/usr/bin/koji tag-build {tag} {build}'.split(' ')
+    cmd = f'/usr/bin/koji tag-build {tag}'.split(' ')
+    cmd.extend(builds)
     cp = subprocess.run(cmd, check=True)
 
-def add_pkg_to_tag(tag, pkg, owner):
-    if not tag or not pkg or not owner:
+def add_pkgs_to_tag(tag, pkgs, owner):
+    if not tag or not pkgs or not owner:
         raise
     # Usage: koji add-pkg [options] tag package [package2 ...]
-    cmd = f'/usr/bin/koji add-pkg {tag} {pkg} --owner {owner}'.split(' ')
+    cmd = f'/usr/bin/koji add-pkg {tag} --owner {owner}'.split(' ')
+    cmd.extend(pkgs)
     cp = subprocess.run(cmd, check=True)
 
 if __name__ == '__main__':
