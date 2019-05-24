@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 import datetime
-import fedora_messaging
+import fedora_messaging.api
 import os
 import re
 import requests
 from libpagure import Pagure
 import logging
+import json
 
 import dnf.subject
 import hawkey
@@ -33,26 +34,60 @@ KOJI_TARGET_TAG = 'coreos-pool'
 KOJI_COREOS_USER = 'coreosbot'
 KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
 
-# We are processing the org.fedoraproject.prod.pungi.compose.status.change topic
-# https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.pungi.compose.status.change&delta=100000
-########import json
-########msg = json.loads("""{
-########                "msg": {
-########                    "status": "DOOMED",
-########                    "release_type": "ga",
-########                    "compose_label": null,
-########                    "compose_respin": 0,
-########                    "compose_date": "20180215",
-########                    "release_version": "Bikeshed",
-########                    "location": "http://kojipkgs.fedoraproject.org/compose/Fedora-Modular-Bikeshed-20180215.n.0/compose",
-########                    "compose_type": "nightly",
-########                    "release_is_layered": false,
-########                    "release_name": "Fedora-Modular",
-########                    "release_short": "Fedora-Modular",
-########                    "compose_id": "Fedora-Modular-Bikeshed-20180215.n.0"
-########                  }}
-########"""
-########)
+# We are processing the io.pagure.prod.pagure.git.receive topic
+# https://apps.fedoraproject.org/datagrepper/raw?topic=io.pagure.prod.pagure.git.receive&delta=100000
+EXAMPLE_MESSAGE_BODY = json.loads("""
+{
+  "msg": {
+    "forced": false,
+    "agent": "dustymabe",
+    "repo": {
+      "custom_keys": [],
+      "description": "coreos-koji-data",
+      "parent": null,
+      "date_modified": "1558714988",
+      "access_users": {
+        "admin": [],
+        "commit": [],
+        "ticket": [],
+        "owner": [
+          "dustymabe"
+        ]
+      },
+      "namespace": "dusty",
+      "priorities": {},
+      "id": 6234,
+      "access_groups": {
+        "admin": [],
+        "commit": [],
+        "ticket": []
+      },
+      "milestones": {},
+      "user": {
+        "fullname": "Dusty Mabe",
+        "name": "dustymabe"
+      },
+      "date_created": "1558714988",
+      "fullname": "dusty/coreos-koji-data",
+      "url_path": "dusty/coreos-koji-data",
+      "close_status": [],
+      "tags": [],
+      "name": "coreos-koji-data"
+    },
+    "end_commit": "db5c806769a5ab35bfeb15e1ac7c727ec1275b23",
+    "branch": "master",
+    "authors": [
+      {
+        "fullname": "Dusty Mabe",
+        "name": "dustymabe"
+      }
+    ],
+    "total_commits": 1,
+    "start_commit": "db5c806769a5ab35bfeb15e1ac7c727ec1275b23"
+  }
+}
+"""
+)
 
 
 # Given a repo (and thus an input JSON) analyze existing koji tag set
@@ -98,10 +133,9 @@ class Consumer(object):
         # Used for printing out a value when the day has changed
         self.date = datetime.date.today()
 
-#   def __call__(self, message: fedora_messaging.api.Message):
-    def __call__(self):
-       #logger.debug(message.topic)
-       #logger.debug(message.body)
+    def __call__(self, message: fedora_messaging.api.Message):
+        logger.debug(message.topic)
+        logger.debug(message.body)
 
 
        ## Grab the raw message body and the status from that
@@ -215,6 +249,11 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     cmd.extend(pkgs)
     cp = subprocess.run(cmd, check=True)
 
+# If run directly we are just testing. So mock up some of
+# the data and fake it.
 if __name__ == '__main__':
+    m = fedora_messaging.api.Message(
+            topic = 'io.pagure.prod.pagure.git.receive',
+            body = EXAMPLE_MESSAGE_BODY)
     c = Consumer()
-    c.__call__()
+    c.__call__(m)
