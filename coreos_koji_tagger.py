@@ -175,6 +175,7 @@ def get_tagged_builds(tag):
     #   kernel-5.0.10-300.fc30                    coreos-pool           labbott
     #   kernel-5.0.11-300.fc30                    coreos-pool           labbott
     # 
+    # Usage: koji list-tagged [options] tag [package]
     cmd = f'/usr/bin/koji list-tagged {tag} --quiet'.split(' ')
     cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
@@ -182,6 +183,7 @@ def get_tagged_builds(tag):
 def get_pkgs_in_tag(tag):
     if not tag:
         raise
+    # Usage: koji list-pkgs [options]
     cmd = f'/usr/bin/koji list-pkgs --tag={tag} --quiet'.split(' ')
     cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
@@ -189,12 +191,14 @@ def get_pkgs_in_tag(tag):
 def tag_build(tag, build):
     if not tag or not build:
         raise
+    # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
     cmd = f'/usr/bin/koji tag-build {tag} {build}'.split(' ')
     cp = subprocess.run(cmd, check=True)
 
 def add_pkg_to_tag(tag, pkg, owner):
     if not tag or not pkg or not owner:
         raise
+    # Usage: koji add-pkg [options] tag package [package2 ...]
     cmd = f'/usr/bin/koji add-pkg {tag} {pkg} --owner {owner}'.split(' ')
     cp = subprocess.run(cmd, check=True)
 
