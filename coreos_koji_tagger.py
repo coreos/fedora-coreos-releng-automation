@@ -30,8 +30,8 @@ KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
 # The target tag where we want builds to end up. We'll check this tag
 # to see if rpms are there.
 KOJI_TARGET_TAG = 'coreos-pool'
-KOJI_COREOS_USER = 'dustymabe' # for now
-#KOJI_INTERMEDIATE_TAG = 'f{release}-coreos-signing-pending'
+KOJI_COREOS_USER = 'coreosbot'
+KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
 
 # We are processing the org.fedoraproject.prod.pungi.compose.status.change topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.pungi.compose.status.change&delta=100000
@@ -68,7 +68,22 @@ class Consumer(object):
     def __init__(self):
         self.tag = KOJI_TARGET_TAG
         self.koji_user = KOJI_COREOS_USER
+        self.kerberos_domain   = KERBEROS_DOMAIN
         self.token = os.getenv('PAGURE_TOKEN')
+
+        # If a keytab was specified let's use it
+        self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
+        if self.keytab_file:
+            logger.info(f'Authenticating with keytab: {self.keytab_file}')
+            if os.path.exists(self.keytab_file):
+                self.kinit()
+            else:
+                raise
+        else:
+            logger.info('No keytab file defined in '
+                        '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
+            logger.info('Will not attempt koji write operations')
+
         if self.token:
             logger.info("Using detected token to talk to pagure.") 
             self.pg = Pagure(pagure_token=token)
@@ -133,6 +148,12 @@ class Consumer(object):
 
 #       if self.token:
 #           self.pg.create_issue(title=title, content=content)
+
+    def kinit(self):
+        cmd = f'/usr/bin/kinit -k -t {self.keytab_file}'
+        cmd += f' {self.koji_user}@{self.kerberos_domain}'
+        cp = subprocess.run(cmd.split(' '), check=True)
+
 
 def grab_first_column(text):
     # The output is split by newlines (split \n) and contains an 
