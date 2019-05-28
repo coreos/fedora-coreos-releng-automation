@@ -240,13 +240,13 @@ def get_pkgs_in_tag(tag: str) -> list:
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
-def tag_builds(tag: bool, builds: list):
+def tag_builds(tag: str, builds: list):
     if not tag or not builds:
         raise
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
     cmd = f'/usr/bin/koji tag-build {tag}'.split(' ')
     cmd.extend(builds)
-    cp = runcmd(cmd, check=True)
+    runcmd(cmd, check=True)
 
 def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     if not tag or not pkgs or not owner:
@@ -254,7 +254,7 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     # Usage: koji add-pkg [options] tag package [package2 ...]
     cmd = f'/usr/bin/koji add-pkg {tag} --owner {owner}'.split(' ')
     cmd.extend(pkgs)
-    cp = runcmd(cmd, check=True)
+    runcmd(cmd, check=True)
 
 # The code in this file is expected to be run through fedora messaging
 # However, you can run the script directly for testing purposes. The
