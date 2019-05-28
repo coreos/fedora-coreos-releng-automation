@@ -90,12 +90,6 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
 # Given a repo (and thus an input JSON) analyze existing koji tag set
 # and tag in any missing packages
 
-#json.loads("""
-#        kernel
-#        htop
-#""")
-
-    
 class Consumer(object):
     def __init__(self):
         self.tag = KOJI_TARGET_TAG
@@ -172,11 +166,11 @@ class Consumer(object):
             # Take the first item from the list returned by possibilites func
             subject = dnf.subject.Subject(build)
             buildinfo = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)[0]
-            print(buildinfo.name)
-            print(buildinfo.version)
-            print(buildinfo.epoch)
-            print(buildinfo.release)
-            print(buildinfo.arch)
+            #   print(buildinfo.name)
+            #   print(buildinfo.version)
+            #   print(buildinfo.epoch)
+            #   print(buildinfo.release)
+            #   print(buildinfo.arch)
 
             # Check to see if the package is already covered by the tag
             if buildinfo.name not in pkgsintag:
