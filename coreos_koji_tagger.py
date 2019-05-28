@@ -102,7 +102,6 @@ class Consumer(object):
         # If a keytab was specified let's use it
         self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
         if self.keytab_file:
-            logger.info(f'Authenticating with keytab: {self.keytab_file}')
             if os.path.exists(self.keytab_file):
                 self.kinit()
             else:
@@ -115,6 +114,12 @@ class Consumer(object):
     def __call__(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
         logger.debug(message.body)
+
+        # Re-attempt to kinit if our authentication has timed out
+        if self.keytab_file:
+            if check_koji_connection().returncode != 0:
+                self.kinit()
+
         # Grab the raw message body and the status from that
         msg = message.body['msg']
         branch = msg['branch']
@@ -192,9 +197,11 @@ class Consumer(object):
                 tag_builds(tag=self.tag, builds=buildstotag)
 
     def kinit(self):
+        logger.info(f'Authenticating with keytab: {self.keytab_file}')
         cmd = f'/usr/bin/kinit -k -t {self.keytab_file}'
         cmd += f' {self.koji_user}@{self.kerberos_domain}'
-        cp = runcmd(cmd.split(' '), check=True)
+        runcmd(cmd.split(' '), check=True)
+        check_koji_connection(check=True) # Make sure it works
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     try:
@@ -255,6 +262,12 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     cmd = f'/usr/bin/koji add-pkg {tag} --owner {owner}'.split(' ')
     cmd.extend(pkgs)
     runcmd(cmd, check=True)
+
+def check_koji_connection(check: bool = False) -> subprocess.CompletedProcess:
+    # Usage: koji moshimoshi [options]
+    cmd = f'/usr/bin/koji moshimoshi'.split(' ')
+    cp = runcmd(cmd, check=check, capture_output=True)
+    return cp
 
 # The code in this file is expected to be run through fedora messaging
 # However, you can run the script directly for testing purposes. The
