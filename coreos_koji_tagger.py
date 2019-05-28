@@ -1,10 +1,8 @@
 #!/usr/bin/python3
-import datetime
 import fedora_messaging.api
 import os
 import re
 import requests
-from libpagure import Pagure
 import logging
 import json
 
@@ -18,9 +16,6 @@ import subprocess
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-# Connect to pagure and set it to point to our repo
-PAGURE_REPO='dusty/failed-composes'
 
 # URL for linking to koji tasks by ID
 KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
@@ -101,7 +96,6 @@ class Consumer(object):
         self.tag = KOJI_TARGET_TAG
         self.koji_user = KOJI_COREOS_USER
         self.kerberos_domain   = KERBEROS_DOMAIN
-        self.token = os.getenv('PAGURE_TOKEN')
 
         # If a keytab was specified let's use it
         self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
@@ -115,20 +109,6 @@ class Consumer(object):
             logger.info('No keytab file defined in '
                         '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
             logger.info('Will not attempt koji write operations')
-
-        if self.token:
-            logger.info("Using detected token to talk to pagure.") 
-            self.pg = Pagure(pagure_token=token)
-        else:
-            logger.info("No pagure token was detected.") 
-            logger.info("This script will run but won't be able to create new issues.")
-            self.pg = Pagure()
-
-        # Set the repo to create new issues against
-        self.pg.repo=PAGURE_REPO
-
-        # Used for printing out a value when the day has changed
-        self.date = datetime.date.today()
 
     def __call__(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
@@ -187,9 +167,6 @@ class Consumer(object):
             logger.info(f'Tagging builds into tag: {buildstotag}')
             if self.keytab_file:
                 tag_builds(tag=self.tag, builds=buildstotag)
-
-#       if self.token:
-#           self.pg.create_issue(title=title, content=content)
 
     def kinit(self):
         cmd = f'/usr/bin/kinit -k -t {self.keytab_file}'
