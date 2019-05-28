@@ -262,12 +262,30 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     cmd.extend(pkgs)
     cp = runcmd(cmd, check=True)
 
-# If run directly we are just testing. So mock up some of
-# the data and fake it.
+# The code in this file is expected to be run through fedora messaging
+# However, you can run the script directly for testing purposes. The
+# below code allows us to do that and also fake feeding data to the
+# call by updating the json text below.
 if __name__ == '__main__':
     sh = logging.StreamHandler()
     sh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
     logger.addHandler(sh)
+
+    # Mock the web request to get the data so that we can easily
+    # modify the below values in order to run a test:
+    from unittest.mock import Mock
+
+    requests_response = Mock()
+    requests_response.text = """
+[
+    "kernel-5.0.17-300.fc30",
+    "coreos-installer-0-5.gitd3fc540.fc30",
+    "selinux-policy-3.14.3-37.fc30",
+    "cowsay-3.04-12.fc30"
+]
+    """
+    requests = Mock()
+    requests.get.return_value = requests_response
 
     m = fedora_messaging.api.Message(
             topic = 'io.pagure.prod.pagure.git.receive',
