@@ -11,6 +11,7 @@ import hawkey
 
 import sys
 import subprocess
+import requests
 
 # Set local logging 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,10 @@ KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
 KOJI_TARGET_TAG = 'coreos-pool'
 KOJI_COREOS_USER = 'coreosbot'
 KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
+
+GIT_REPO_DOMAIN   = 'https://pagure.io/'
+GIT_REPO_FULLNAME = 'dusty/coreos-koji-data'
+GIT_REPO_BRANCH   = 'master'
 
 # We are processing the io.pagure.prod.pagure.git.receive topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=io.pagure.prod.pagure.git.receive&delta=100000
@@ -96,6 +101,9 @@ class Consumer(object):
         self.tag = KOJI_TARGET_TAG
         self.koji_user = KOJI_COREOS_USER
         self.kerberos_domain   = KERBEROS_DOMAIN
+        self.git_repo_domain   = GIT_REPO_DOMAIN
+        self.git_repo_fullname = GIT_REPO_FULLNAME
+        self.git_repo_branch   = GIT_REPO_BRANCH
 
         # If a keytab was specified let's use it
         self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
@@ -113,13 +121,34 @@ class Consumer(object):
     def __call__(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
         logger.debug(message.body)
+        # Grab the raw message body and the status from that
+        msg = message.body['msg']
+        branch = msg['branch']
+        repo   = msg['repo']['fullname']
+        commit = msg['end_commit']
 
+        if (repo != self.git_repo_fullname):
+            logger.debug(f'Skipping message from unrelated repo: {repo}')
+            return
 
-       ## Grab the raw message body and the status from that
-       #msg = message.body
+        if (branch != self.git_repo_branch):
+            logger.debug(f'Skipping message from unrelated branch: {branch}')
+            return
 
-        # set of desired rpms
-        desired = {'kernel-5.0.17-300.fc30', 'coreos-installer-0-5.gitd3fc540.fc30', 'cowsay-3.04-12.fc30'}
+        # Now grab data from the commit we should operate on:
+        # https://pagure.io/dusty/coreos-koji-data/raw/db5c806769a5ab35bfeb15e1ac7c727ec1275b23/f/data.json
+        # This data file is basically a list ['build1NVR', 'build2NVR', 'etc']
+        url = f'{self.git_repo_domain}/{self.git_repo_fullname}/raw/{commit}/f/data.json'
+        logger.debug(f'Attempting to retrieve data from {url}')
+        r = requests.get(url)
+        data = json.loads(r.text)
+
+        logger.debug('Retrieved JSON data:')
+        logger.debug(data)
+
+        # convert the data (list) of desired rpms into a set so we can
+        # calculate difference later
+        desired = set(data)
 
         # Grab the list of packages that can be tagged into the tag
         pkgsintag = get_pkgs_in_tag(self.tag)
