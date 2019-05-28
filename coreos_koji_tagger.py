@@ -181,6 +181,10 @@ class Consumer(object):
             if buildinfo.name not in pkgsintag:
                 pkgstoadd.append(buildinfo.name)
 
+        # Log if there is nothing to do
+        if not pkgstoadd and not buildstotag:
+            logger.info(f'No new builds to tag.. going back to sleep')
+            return
 
         # Add the needed packages to the tag if we have credentials
         if pkgstoadd:
