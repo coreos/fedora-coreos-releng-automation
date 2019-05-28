@@ -133,7 +133,7 @@ class Consumer(object):
         # https://pagure.io/dusty/coreos-koji-data/raw/db5c806769a5ab35bfeb15e1ac7c727ec1275b23/f/data.json
         # This data file is basically a list ['build1NVR', 'build2NVR', 'etc']
         url = f'{self.git_repo_domain}/{self.git_repo_fullname}/raw/{commit}/f/data.json'
-        logger.debug(f'Attempting to retrieve data from {url}')
+        logger.info(f'Attempting to retrieve data from {url}')
         r = requests.get(url)
         data = json.loads(r.text)
 
