@@ -194,8 +194,18 @@ class Consumer(object):
     def kinit(self):
         cmd = f'/usr/bin/kinit -k -t {self.keytab_file}'
         cmd += f' {self.koji_user}@{self.kerberos_domain}'
-        cp = subprocess.run(cmd.split(' '), check=True)
+        cp = runcmd(cmd.split(' '), check=True)
 
+def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
+    try:
+        cp = subprocess.run(cmd, **kwargs)
+    except subprocess.CalledProcessError:
+        logger.error('Running command returned bad exitcode')
+        logger.error(f'COMMAND: {cmd}')
+        logger.error(f' STDOUT: {cp.stdout}')
+        logger.error(f' STDERR: {cp.stderr}')
+        raise
+    return cp # subprocess.CompletedProcess
 
 def grab_first_column(text: str) -> list:
     # The output is split by newlines (split \n) and contains an 
@@ -219,7 +229,7 @@ def get_tagged_builds(tag: str) -> list:
     # 
     # Usage: koji list-tagged [options] tag [package]
     cmd = f'/usr/bin/koji list-tagged {tag} --quiet'.split(' ')
-    cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
 def get_pkgs_in_tag(tag: str) -> list:
@@ -227,7 +237,7 @@ def get_pkgs_in_tag(tag: str) -> list:
         raise
     # Usage: koji list-pkgs [options]
     cmd = f'/usr/bin/koji list-pkgs --tag={tag} --quiet'.split(' ')
-    cp = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
 def tag_builds(tag: bool, builds: list):
@@ -236,7 +246,7 @@ def tag_builds(tag: bool, builds: list):
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
     cmd = f'/usr/bin/koji tag-build {tag}'.split(' ')
     cmd.extend(builds)
-    cp = subprocess.run(cmd, check=True)
+    cp = runcmd(cmd, check=True)
 
 def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     if not tag or not pkgs or not owner:
@@ -244,7 +254,7 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     # Usage: koji add-pkg [options] tag package [package2 ...]
     cmd = f'/usr/bin/koji add-pkg {tag} --owner {owner}'.split(' ')
     cmd.extend(pkgs)
-    cp = subprocess.run(cmd, check=True)
+    cp = runcmd(cmd, check=True)
 
 # If run directly we are just testing. So mock up some of
 # the data and fake it.
