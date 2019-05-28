@@ -16,9 +16,6 @@ import subprocess
 
 # Set local logging 
 logger = logging.getLogger(__name__)
-sh = logging.StreamHandler()
-sh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
-logger.addHandler(sh)
 logger.setLevel(logging.INFO)
 
 
@@ -252,6 +249,10 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
 # If run directly we are just testing. So mock up some of
 # the data and fake it.
 if __name__ == '__main__':
+    sh = logging.StreamHandler()
+    sh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+    logger.addHandler(sh)
+
     m = fedora_messaging.api.Message(
             topic = 'io.pagure.prod.pagure.git.receive',
             body = EXAMPLE_MESSAGE_BODY)
