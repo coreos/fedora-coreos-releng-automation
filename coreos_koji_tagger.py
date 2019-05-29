@@ -193,12 +193,14 @@ class Consumer(object):
                 add_pkgs_to_tag(tag=self.tag,
                                 pkgs=pkgstoadd,
                                 owner=self.koji_user)
+                logger.info('Package adding done')
 
         # Perform the tagging if we have credentials
         if buildstotag:
             logger.info(f'Tagging builds into tag: {buildstotag}')
             if self.keytab_file:
                 tag_builds(tag=self.tag, builds=buildstotag)
+                logger.info('Tagging done')
 
     def kinit(self):
         logger.info(f'Authenticating with keytab: {self.keytab_file}')
