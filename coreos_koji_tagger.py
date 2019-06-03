@@ -131,7 +131,7 @@ class Consumer(object):
             return
 
         if (branch != self.git_repo_branch):
-            logger.debug(f'Skipping message from unrelated branch: {branch}')
+            logger.info(f'Skipping message from unrelated branch: {branch}')
             return
 
         # Now grab data from the commit we should operate on:
