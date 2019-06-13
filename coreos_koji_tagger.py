@@ -168,8 +168,8 @@ class Consumer(object):
         # koji builds that aren't in the tag we can add the koji pkg to the
         # tag (if needed) and then tag the koji build into the tag.
 
-        # Grab the list of desired rpms
-        desiredrpms = set(data)
+        # parse the lockfile and get a set of rpm NEVRAs
+        desiredrpms = set(parse_lockfile_data(data))
 
         # convert the rpm NEVRAs into a list of srpm NVRA (format of koji
         # build name)
@@ -246,6 +246,12 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
         logger.error(f' STDERR: {cp.stderr}')
         raise
     return cp # subprocess.CompletedProcess
+
+def parse_lockfile_data(data: str) -> list:
+    # Parse the rpm lockfile format and return a list of rpms in
+    # NEVRA form.
+    # TODO add link to docs on lockfile format when they exist
+    return list(data)
 
 def grab_first_column(text: str) -> list:
     # The output is split by newlines (split \n) and contains an 
