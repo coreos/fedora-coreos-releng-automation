@@ -211,6 +211,7 @@ class Consumer(object):
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     try:
+        logger.debug(f'Running command: {cmd}')
         cp = subprocess.run(cmd, **kwargs)
     except subprocess.CalledProcessError:
         logger.error('Running command returned bad exitcode')
