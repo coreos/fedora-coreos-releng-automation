@@ -145,20 +145,46 @@ class Consumer(object):
         logger.debug('Retrieved JSON data:')
         logger.debug(data)
 
-        # convert the data (list) of desired rpms into a set so we can
-        # calculate difference later
-        desired = set(data)
+        # NOMENCLATURE:
+        # 
+        # In koji there is the concept of a pkg and a build. A pkg
+        # is a piece of software (i.e. kernel) whereas a build is a
+        # specific build of that software that is unique by NVR (i.e.
+        # kernel-5.0.17-300.fc30). RPMs are output of a build. There
+        # can be many rpms (including subpackages) output from a build
+        # (for example kernel-5.0.17-300.fc30.x86_64.rpm and
+        # kernel-devel-5.0.17-300.fc30.x86_64.rpm). So we have:
+        #
+        # kernel                              --> koji pkg
+        # kernel-5.0.17-300.fc30              --> koji build (matches srpm name)
+        # kernel-5.0.17-300.fc30.x86_64       --> main rpm package
+        # kernel-devel-5.0.17-300.fc30.x86_64 --> rpm subpackage
+        #
+        # STRATEGY:
+        # 
+        # The lockfile input gives a list of rpm names in NEVRA format. We 
+        # must derive the srpm name (koji build name) from that and compare
+        # that with existing koji builds in the tag. Once we have a list of
+        # koji builds that aren't in the tag we can add the koji pkg to the
+        # tag (if needed) and then tag the koji build into the tag.
 
-        # Grab the list of packages that can be tagged into the tag
+        # Grab the list of desired rpms
+        desiredrpms = set(data)
+
+        # convert the rpm NEVRAs into a list of srpm NVRA (format of koji
+        # build name)
+        desiredbuilds = set(get_builds_from_rpmnevras(desiredrpms))
+
+        # Grab the list of pkgs that can be tagged into the tag
         pkgsintag = get_pkgs_in_tag(self.tag)
 
         # Grab the currently tagged builds and convert it into a set
-        current = set(get_tagged_builds(self.tag))
+        currentbuilds = set(get_tagged_builds(self.tag))
 
         # Find out the difference between the current set of builds
         # that exist in the koji tag and the desired set of builds to
         # be added to the koji tag.
-        buildstotag = list(desired.difference(current))
+        buildstotag = list(desiredbuilds.difference(currentbuilds))
 
 
         # compute the package names of each build and determine whether
@@ -177,7 +203,7 @@ class Consumer(object):
             #   print(buildinfo.release)
             #   print(buildinfo.arch)
 
-            # Check to see if the package is already covered by the tag
+            # Check to see if the koji pkg is already covered by the tag
             if buildinfo.name not in pkgsintag:
                 pkgstoadd.append(buildinfo.name)
 
@@ -228,6 +254,64 @@ def grab_first_column(text: str) -> list:
     lines = text.rstrip().split('\n')
     return [b.split(' ')[0] for b in lines]
 
+def get_srpms_from_rpmnvras(rpmnvras: set) -> set:
+    if not rpmnvras:
+        raise
+
+    # Query koji in a single query to get rpminfo (includes SRPM name)
+    # for all rpmnvras
+    #
+    # Usage: koji rpminfo [options] <n-v-r.a> [<n-v-r.a> ...]
+    cmd = f'/usr/bin/koji rpminfo'.split(' ')
+    cmd+= rpmnvras
+    cp = runcmd(cmd, check=True, capture_output=True, text=True)
+
+    # Outputs `SRPM: E:N-V-R` format like:
+    #
+    # $ koji rpminfo grub2-efi-x64-2.02-81.fc30.x86_64
+    #   RPM: 1:grub2-efi-x64-2.02-81.fc30.x86_64 [17584661]
+    #   RPM Path: /mnt/koji/packages/grub2/2.02/81.fc30/x86_64/grub2-efi-x64-2.02-81.fc30.x86_64.rpm
+    #   SRPM: 1:grub2-2.02-81.fc30 [1269330]
+    #   SRPM Path: /mnt/koji/packages/grub2/2.02/81.fc30/src/grub2-2.02-81.fc30.src.rpm
+    #   Built: Mon, 20 May 2019 13:19:34 EDT
+    #   SIGMD5: bbfb797611097256c119f99c4480e5a8
+    #   Size: 365984
+    #   License: GPLv3+
+    #   Build ID: 1269330
+    #   Buildroot: 16295881 (tag f30-build, arch x86_64, repo 1166504)
+    #   Build Host: bkernel03.phx2.fedoraproject.org
+    #   Build Task: 34957405
+
+    # Go through each line and get the srpm names
+    srpms = set()
+    for line in cp.stdout.strip().splitlines():
+        if 'SRPM:' in line:
+            # The (\d+:)? pulls the epoch off the front of each SRPM value
+            # if it exists.
+            srpms.add(re.search('SRPM: (\d+:)?([\S]+)', line).group(2))
+
+    logger.debug(f"Found SRPMS: {srpms}")
+    return srpms
+
+def get_builds_from_rpmnevras(rpmnevras: set) -> list:
+    # Given a list of rpm NEVRAs get the list of srpms (and 
+    # thus koji build names) from it
+    if not rpmnevras:
+        raise
+
+    # Get a set of NVRAs from the list of NEVRAs
+    rpmnvras = set()
+    for rpmnevra in rpmnevras:
+        # Find the some defining information for this rpm.
+        # Take the first item from the list returned by possibilites func
+        subject = dnf.subject.Subject(rpmnevra)
+        rpminfo = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)[0]
+        # come up with rpm NVRA
+        rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
+        rpmnvras.add(rpmnvra)
+
+    builds = get_srpms_from_rpmnvras(rpmnvras)
+    return builds
 
 def get_tagged_builds(tag: str) -> list:
     if not tag:
@@ -292,10 +376,11 @@ if __name__ == '__main__':
     requests_response = Mock()
     requests_response.text = """
 [
-    "kernel-5.0.17-300.fc30",
-    "coreos-installer-0-5.gitd3fc540.fc30",
-    "selinux-policy-3.14.3-37.fc30",
-    "cowsay-3.04-12.fc30"
+    "kernel-5.0.17-300.fc30.x86_64",
+    "coreos-installer-dracut-0-7.git0e6979c.fc30.noarch",
+    "ignition-2.0.0-1.git0c1da80.fc30.x86_64",
+    "grub2-efi-x64-1:2.02-81.fc30.x86_64",
+    "selinux-policy-3.14.3-37.fc30.noarch"
 ]
     """
     requests = Mock()
