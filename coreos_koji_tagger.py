@@ -194,14 +194,7 @@ class Consumer(object):
         for build in buildstotag:
 
             # Find the some defining information for this build.
-            # Take the first item from the list returned by possibilites func
-            subject = dnf.subject.Subject(build)
-            buildinfo = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)[0]
-            #   print(buildinfo.name)
-            #   print(buildinfo.version)
-            #   print(buildinfo.epoch)
-            #   print(buildinfo.release)
-            #   print(buildinfo.arch)
+            buildinfo = get_rich_info_for_rpm_string(build)
 
             # Check to see if the koji pkg is already covered by the tag
             if buildinfo.name not in pkgsintag:
@@ -246,6 +239,23 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
         logger.error(f' STDERR: {cp.stderr}')
         raise
     return cp # subprocess.CompletedProcess
+
+def get_rich_info_for_rpm_string(string: str) -> hawkey.NEVRA:
+
+    # get a hawkey.Subject object for the string
+    subject = dnf.subject.Subject(string) # returns hawkey.Subject
+
+    # get a list of hawkey.NEVRA objects that are the possibilities
+    nevras  = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)
+
+    # return the first hawkey.NEVRA item in the list of possibilities
+    info = nevras[0]
+    #   print(info.name)
+    #   print(info.version)
+    #   print(info.epoch)
+    #   print(info.release)
+    #   print(info.arch)
+    return info
 
 def parse_lockfile_data(data: str) -> list:
     # Parse the rpm lockfile format and return a list of rpms in
@@ -309,9 +319,7 @@ def get_builds_from_rpmnevras(rpmnevras: set) -> list:
     rpmnvras = set()
     for rpmnevra in rpmnevras:
         # Find the some defining information for this rpm.
-        # Take the first item from the list returned by possibilites func
-        subject = dnf.subject.Subject(rpmnevra)
-        rpminfo = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)[0]
+        rpminfo = get_rich_info_for_rpm_string(rpmnevra)
         # come up with rpm NVRA
         rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
         rpmnvras.add(rpmnvra)
