@@ -140,10 +140,7 @@ class Consumer(object):
         url = f'{self.git_repo_domain}/{self.git_repo_fullname}/raw/{commit}/f/data.json'
         logger.info(f'Attempting to retrieve data from {url}')
         r = requests.get(url)
-        data = json.loads(r.text)
 
-        logger.debug('Retrieved JSON data:')
-        logger.debug(data)
 
         # NOMENCLATURE:
         # 
@@ -169,7 +166,7 @@ class Consumer(object):
         # tag (if needed) and then tag the koji build into the tag.
 
         # parse the lockfile and get a set of rpm NEVRAs
-        desiredrpms = set(parse_lockfile_data(data))
+        desiredrpms = set(parse_lockfile_data(r.text))
 
         # convert the rpm NEVRAs into a list of srpm NVRA (format of koji
         # build name)
@@ -257,11 +254,32 @@ def get_rich_info_for_rpm_string(string: str) -> hawkey.NEVRA:
     #   print(info.arch)
     return info
 
-def parse_lockfile_data(data: str) -> list:
+def parse_lockfile_data(text: str) -> list:
     # Parse the rpm lockfile format and return a list of rpms in
     # NEVRA form.
-    # TODO add link to docs on lockfile format when they exist
-    return list(data)
+    # Best documention on the format for now:
+    #     https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
+    #
+    # An example looks something like:
+    #
+    #   {
+    #     "packages" : [
+    #       [
+    #         "GeoIP-1.6.12-5.fc30.x86_64",
+    #         "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+    #       ],
+    #   }
+
+    # The data is JSON (yay)
+    data = json.loads(text)
+    logger.debug('Retrieved JSON data:')
+    logger.debug(json.dumps(data, indent=4, sort_keys=True))
+
+    # The data structure is a list of lists where the first item
+    # in each sublist is the package name in NEVRA format. We only
+    # care about the NEVRA so just grab that and return it.
+    packages = [x[0] for x in data['packages']]
+    return packages
 
 def grab_first_column(text: str) -> list:
     # The output is split by newlines (split \n) and contains an 
@@ -389,13 +407,39 @@ if __name__ == '__main__':
 
     requests_response = Mock()
     requests_response.text = """
-[
-    "kernel-5.0.17-300.fc30.x86_64",
-    "coreos-installer-dracut-0-7.git0e6979c.fc30.noarch",
-    "ignition-2.0.0-1.git0c1da80.fc30.x86_64",
-    "grub2-efi-x64-1:2.02-81.fc30.x86_64",
-    "selinux-policy-3.14.3-37.fc30.noarch"
-]
+    requests_response.text = """
+{
+  "packages" : [
+    [
+      "GeoIP-1.6.12-5.fc30.x86_64",
+      "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+    ],
+    [
+      "GeoIP-GeoLite-data-2018.06-3.fc30.noarch",
+      "sha256:b871f757d061af1125280219dca15b5066018b6ff20c08010c5774c484f127a8"
+    ],
+    [
+      "NetworkManager-1:1.16.2-1.fc30.x86_64",
+      "sha256:4818f336e9496ba919dd8158172d57b77cb65389f4b6c0d2462fea3a29ad9fda"
+    ],
+    [
+      "NetworkManager-libnm-1:1.16.2-1.fc30.x86_64",
+      "sha256:f973761517dd7fd2dcfff0aa9578c99e509591a87d0fc316751c0f96e045cbc1"
+    ],
+    [
+      "acl-2.2.53-3.fc30.x86_64",
+      "sha256:af5d6641b71ec62d126fa71322a8451aa3de7948202633da802bccd1fd6ece45"
+    ],
+    [
+      "adcli-0.8.2-3.fc30.x86_64",
+      "sha256:ff7862e1b1fefe936f3ae614d008835e686ccdc6ec06e7cf445e8f75d73d50f0"
+    ],
+    [
+      "afterburn-4.1.0-2.module_f30+4375+41ed41a6.x86_64",
+      "sha256:c1d3aa735ea13a8831e92a54b5c0a32b33cbfb5610cfeda8294b2163dd2f5699"
+    ]
+  ]
+}
     """
     requests = Mock()
     requests.get.return_value = requests_response
