@@ -191,7 +191,7 @@ class Consumer(object):
         for build in buildstotag:
 
             # Find the some defining information for this build.
-            buildinfo = get_rich_info_for_rpm_string(build)
+            buildinfo = get_rich_info_for_rpm_string(build, arch=False)
 
             # Check to see if the koji pkg is already covered by the tag
             if buildinfo.name not in pkgsintag:
@@ -237,13 +237,18 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
         raise
     return cp # subprocess.CompletedProcess
 
-def get_rich_info_for_rpm_string(string: str) -> hawkey.NEVRA:
+def get_rich_info_for_rpm_string(string: str, arch: bool) -> hawkey.NEVRA:
+    # arch: (bool) whether arch is included in the string
+    if arch:
+        form=hawkey.FORM_NEVRA
+    else:
+        form=hawkey.FORM_NEVR
 
     # get a hawkey.Subject object for the string
     subject = dnf.subject.Subject(string) # returns hawkey.Subject
 
     # get a list of hawkey.NEVRA objects that are the possibilities
-    nevras  = subject.get_nevra_possibilities(forms=hawkey.FORM_NEVRA)
+    nevras  = subject.get_nevra_possibilities(forms=form)
 
     # return the first hawkey.NEVRA item in the list of possibilities
     info = nevras[0]
@@ -337,7 +342,7 @@ def get_builds_from_rpmnevras(rpmnevras: set) -> list:
     rpmnvras = set()
     for rpmnevra in rpmnevras:
         # Find the some defining information for this rpm.
-        rpminfo = get_rich_info_for_rpm_string(rpmnevra)
+        rpminfo = get_rich_info_for_rpm_string(rpmnevra, arch=True)
         # come up with rpm NVRA
         rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
         rpmnvras.add(rpmnvra)
