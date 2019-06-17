@@ -42,7 +42,6 @@ GIT_REPO_BRANCH   = 'master'
 # https://apps.fedoraproject.org/datagrepper/raw?topic=io.pagure.prod.pagure.git.receive&delta=100000
 EXAMPLE_MESSAGE_BODY = json.loads("""
 {
-  "msg": {
     "forced": false,
     "agent": "dustymabe",
     "repo": {
@@ -88,7 +87,6 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
     ],
     "total_commits": 1,
     "start_commit": "db5c806769a5ab35bfeb15e1ac7c727ec1275b23"
-  }
 }
 """
 )
@@ -129,7 +127,7 @@ class Consumer(object):
                 self.kinit()
 
         # Grab the raw message body and the status from that
-        msg = message.body['msg']
+        msg = message.body
         branch = msg['branch']
         repo   = msg['repo']['fullname']
         commit = msg['end_commit']
