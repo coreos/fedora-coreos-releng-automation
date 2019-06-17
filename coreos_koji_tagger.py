@@ -21,9 +21,16 @@ logger.setLevel(logging.INFO)
 # URL for linking to koji tasks by ID
 KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
 
-# The target tag where we want builds to end up. We'll check this tag
-# to see if rpms are there.
+# The target and the intermediate tag. The target tag is where we want
+# builds to end up. We'll check the target tag to see if builds are already
+# there. The intermediate tag is used when tagging. It is useful to
+# set the intermediate tag different than the target tag when there is
+# an intermediate tag that is set up for signing. For example we use
+# f{releasever}-signing-pending tags today. They inherit from the coreos-pool
+# and are configured to sign rpms and then move them into the
+# coreos-pool tag.
 KOJI_TARGET_TAG = 'coreos-pool'
+KOJI_INTERMEDIATE_TAG = 'f{releasever}-signing-pending'
 KOJI_COREOS_USER = 'coreosbot'
 KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
 
@@ -92,7 +99,8 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
 
 class Consumer(object):
     def __init__(self):
-        self.tag = KOJI_TARGET_TAG
+        self.target_tag        = KOJI_TARGET_TAG
+        self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
         self.koji_user = KOJI_COREOS_USER
         self.kerberos_domain   = KERBEROS_DOMAIN
         self.git_repo_domain   = GIT_REPO_DOMAIN
@@ -170,13 +178,14 @@ class Consumer(object):
 
         # convert the rpm NEVRAs into a list of srpm NVRA (format of koji
         # build name)
-        desiredbuilds = set(get_builds_from_rpmnevras(desiredrpms))
+        buildsinfo = get_buildsinfo_from_rpmnevras(desiredrpms)
+        desiredbuilds = set(buildsinfo.keys())
 
         # Grab the list of pkgs that can be tagged into the tag
-        pkgsintag = get_pkgs_in_tag(self.tag)
+        pkgsintag = get_pkgs_in_tag(self.target_tag)
 
         # Grab the currently tagged builds and convert it into a set
-        currentbuilds = set(get_tagged_builds(self.tag))
+        currentbuilds = set(get_tagged_builds(self.target_tag))
 
         # Find out the difference between the current set of builds
         # that exist in the koji tag and the desired set of builds to
@@ -204,19 +213,28 @@ class Consumer(object):
 
         # Add the needed packages to the tag if we have credentials
         if pkgstoadd:
-            logger.info(f'Adding packages to tag: {pkgstoadd}')
+            logger.info('Adding packages to the '
+                        f'{self.target_tag} tag: {pkgstoadd}')
             if self.keytab_file:
-                add_pkgs_to_tag(tag=self.tag,
+                add_pkgs_to_tag(tag=self.target_tag,
                                 pkgs=pkgstoadd,
                                 owner=self.koji_user)
                 logger.info('Package adding done')
 
-        # Perform the tagging if we have credentials
+        # Perform the tagging for each release into the intermediate
+        # tag for that release if we have credentials
         if buildstotag:
-            logger.info(f'Tagging builds into tag: {buildstotag}')
-            if self.keytab_file:
-                tag_builds(tag=self.tag, builds=buildstotag)
-                logger.info('Tagging done')
+            releasevers = set(buildsinfo.values())
+            for releasever in releasevers:
+                tag = self.intermediate_tag.format(releasever=releasever)
+                buildstotagforthisrelease = \
+                    [x for x in buildstotag if buildsinfo[x] == releasever]
+                logger.info('Tagging builds into the '
+                            f'{tag} tag: {buildstotagforthisrelease}')
+                if self.keytab_file:
+                    tag_builds(tag=self.intermediate_tag,
+                               builds=buildstotagforthisrelease)
+            logger.info('Tagging done')
 
     def kinit(self):
         logger.info(f'Authenticating with keytab: {self.keytab_file}')
@@ -293,19 +311,45 @@ def grab_first_column(text: str) -> list:
     lines = text.rstrip().split('\n')
     return [b.split(' ')[0] for b in lines]
 
-def get_srpms_from_rpmnvras(rpmnvras: set) -> set:
-    if not rpmnvras:
+def get_releasever_from_buildroottag(buildroottag: str) -> str:
+    logger.debug(f'Checking buildroottag {buildroottag}')
+    if 'afterburn' in buildroottag:
+        # example: module-afterburn-rolling-3020190524194016-2c789dff-build
+        releasever = re.search('module-afterburn-rolling-(\d\d)',
+                                                buildroottag).group(1)
+    else:
+        # example: f30-build
+        releasever = re.search('f(\d\d)', buildroottag).group(1)
+    if not releasever:
+        raise
+    return releasever
+
+def get_buildsinfo_from_rpmnevras(rpmnevras: set) -> dict:
+    # Given a list of rpm NEVRAs get the list of srpms (and
+    # thus koji build names) from it
+    if not rpmnevras:
         raise
 
-    # Query koji in a single query to get rpminfo (includes SRPM name)
-    # for all rpmnvras
+    # Get a set of NVRAs from the list of NEVRAs
+    rpmnvras = set()
+    for rpmnevra in rpmnevras:
+        # Find the some defining information for this rpm.
+        rpminfo = get_rich_info_for_rpm_string(rpmnevra, arch=True)
+        # come up with rpm NVRA
+        rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
+        rpmnvras.add(rpmnvra)
+
+    # Query koji in a single query to get rpminfo (includes SRPM name
+    # and buildroot tag name) for all rpmnvras
     #
     # Usage: koji rpminfo [options] <n-v-r.a> [<n-v-r.a> ...]
     cmd = f'/usr/bin/koji rpminfo'.split(' ')
     cmd+= rpmnvras
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
 
-    # Outputs `SRPM: E:N-V-R` format like:
+    # Outputs formatting like:
+    #  - `SRPM: E:N-V-R`
+    #  - `Buildroot: 16295881 (tag f30-build, arch x86_64, repo 1166504)
     #
     # $ koji rpminfo grub2-efi-x64-2.02-81.fc30.x86_64
     #   RPM: 1:grub2-efi-x64-2.02-81.fc30.x86_64 [17584661]
@@ -322,33 +366,25 @@ def get_srpms_from_rpmnvras(rpmnvras: set) -> set:
     #   Build Task: 34957405
 
     # Go through each line and get the srpm names
-    srpms = set()
+    srpm = None
+    buildroottag = None
+    buildsinfo = dict()
     for line in cp.stdout.strip().splitlines():
         if 'SRPM:' in line:
             # The (\d+:)? pulls the epoch off the front of each SRPM value
             # if it exists.
-            srpms.add(re.search('SRPM: (\d+:)?([\S]+)', line).group(2))
+            srpm = re.search('SRPM: (\d+:)?([\S]+)', line).group(2)
+        if 'Buildroot:' in line:
+            buildroottag = re.search('Buildroot: [\d]+ \(tag ([\S]+),', line).group(1)
+            releasever = get_releasever_from_buildroottag(buildroottag)
+            # Now that we have both pieces of info we add to the dict
+            buildsinfo.update({srpm: releasever})
+            srpm = None
+            buildroottag = None
 
-    logger.debug(f"Found SRPMS: {srpms}")
-    return srpms
-
-def get_builds_from_rpmnevras(rpmnevras: set) -> list:
-    # Given a list of rpm NEVRAs get the list of srpms (and 
-    # thus koji build names) from it
-    if not rpmnevras:
-        raise
-
-    # Get a set of NVRAs from the list of NEVRAs
-    rpmnvras = set()
-    for rpmnevra in rpmnevras:
-        # Find the some defining information for this rpm.
-        rpminfo = get_rich_info_for_rpm_string(rpmnevra, arch=True)
-        # come up with rpm NVRA
-        rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
-        rpmnvras.add(rpmnvra)
-
-    builds = get_srpms_from_rpmnvras(rpmnvras)
-    return builds
+    logger.debug("Found Builds: {}".format(buildsinfo.keys()))
+    logger.debug(buildsinfo)
+    return buildsinfo
 
 def get_tagged_builds(tag: str) -> list:
     if not tag:
@@ -412,7 +448,6 @@ if __name__ == '__main__':
 
     requests_response = Mock()
     requests_response.text = """
-    requests_response.text = """
 {
   "packages" : [
     [
@@ -438,6 +473,10 @@ if __name__ == '__main__':
     [
       "adcli-0.8.2-3.fc30.x86_64",
       "sha256:ff7862e1b1fefe936f3ae614d008835e686ccdc6ec06e7cf445e8f75d73d50f0"
+    ],
+    [
+      "linux-atm-libs-2.5.1-21.fc29.x86_64",
+      "sha256:7dfd2156bd09e02a93a54eedea533b44afc41d06df28f2add364e5327b27c0f7"
     ],
     [
       "afterburn-4.1.0-2.module_f30+4375+41ed41a6.x86_64",
