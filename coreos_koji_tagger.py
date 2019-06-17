@@ -246,11 +246,11 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     try:
         logger.debug(f'Running command: {cmd}')
         cp = subprocess.run(cmd, **kwargs)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         logger.error('Running command returned bad exitcode')
         logger.error(f'COMMAND: {cmd}')
-        logger.error(f' STDOUT: {cp.stdout}')
-        logger.error(f' STDERR: {cp.stderr}')
+        logger.error(f' STDOUT: {e.stdout}')
+        logger.error(f' STDERR: {e.stderr}')
         raise
     return cp # subprocess.CompletedProcess
 
