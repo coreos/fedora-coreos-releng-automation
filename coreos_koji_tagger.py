@@ -30,7 +30,7 @@ KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
 # and are configured to sign rpms and then move them into the
 # coreos-pool tag.
 KOJI_TARGET_TAG = 'coreos-pool'
-KOJI_INTERMEDIATE_TAG = 'f{releasever}-signing-pending'
+KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 KOJI_COREOS_USER = 'coreosbot'
 KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
 
@@ -232,8 +232,7 @@ class Consumer(object):
                 logger.info('Tagging builds into the '
                             f'{tag} tag: {buildstotagforthisrelease}')
                 if self.keytab_file:
-                    tag_builds(tag=self.intermediate_tag,
-                               builds=buildstotagforthisrelease)
+                    tag_builds(tag=tag, builds=buildstotagforthisrelease)
             logger.info('Tagging done')
 
     def kinit(self):
