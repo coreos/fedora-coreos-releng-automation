@@ -227,10 +227,11 @@ class Consumer(object):
                 tag = self.intermediate_tag.format(releasever=releasever)
                 buildstotagforthisrelease = \
                     [x for x in buildstotag if buildsinfo[x] == releasever]
-                logger.info('Tagging builds into the '
-                            f'{tag} tag: {buildstotagforthisrelease}')
-                if self.keytab_file:
-                    tag_builds(tag=tag, builds=buildstotagforthisrelease)
+                if buildstotagforthisrelease:
+                    logger.info('Tagging builds into the '
+                                f'{tag} tag: {buildstotagforthisrelease}')
+                    if self.keytab_file:
+                        tag_builds(tag=tag, builds=buildstotagforthisrelease)
             logger.info('Tagging done')
 
     def kinit(self):
