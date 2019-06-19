@@ -17,10 +17,6 @@ import requests
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-# URL for linking to koji tasks by ID
-KOJI_TASK_URL='https://koji.fedoraproject.org/koji/taskinfo?taskID='
-
 # The target and the intermediate tag. The target tag is where we want
 # builds to end up. We'll check the target tag to see if builds are already
 # there. The intermediate tag is used when tagging. It is useful to
