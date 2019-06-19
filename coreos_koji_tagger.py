@@ -27,8 +27,18 @@ logger.setLevel(logging.INFO)
 # coreos-pool tag.
 KOJI_TARGET_TAG = 'coreos-pool'
 KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
+
+# if we are in a stage environment then use the
+# stage koji as well as the staging kerberos
+if os.getenv('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
+    KOJI_CMD = '/usr/bin/stg-koji'
+    KERBEROS_DOMAIN = 'STG.FEDORAPROJECT.ORG'
+else:
+    KOJI_CMD = '/usr/bin/koji'
+    KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
+
+# The name of the FAS user account associated with the keytab
 KOJI_COREOS_USER = 'coreosbot'
-KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
 
 GIT_REPO_DOMAIN   = 'https://pagure.io/'
 GIT_REPO_FULLNAME = 'dusty/coreos-koji-data'
