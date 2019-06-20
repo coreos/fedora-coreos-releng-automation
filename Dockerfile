@@ -55,6 +55,3 @@ RUN sed -i 's/^    default_ccache_name/#   default_ccache_name/' /etc/krb5.conf
 # Call fedora-messaging CLI and tell it to use the ComposeTracker
 # class from the compose-tracker module.
 CMD fedora-messaging --conf /work/my_config.toml consume --callback=coreos_koji_tagger:Consumer
-
-# Put the keytab in place
-ADD coreosbot.keytab  /work/
