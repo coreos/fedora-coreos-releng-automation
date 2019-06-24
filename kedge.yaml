@@ -1,4 +1,4 @@
-name: coreos-koji-tagger
+name: fedora-coreos-koji-tagger
 
 deploymentConfigs:
   - containers:
@@ -11,10 +11,10 @@ deploymentConfigs:
         imageChangeParams:
           automatic: true
           containerNames:
-          - coreos-koji-tagger
+          - fedora-coreos-koji-tagger
           from:
             kind: ImageStreamTag
-            name: coreos-koji-tagger-img:latest
+            name: fedora-coreos-koji-tagger-img:latest
 #secrets:
 #  - name: pagure-token
 #    data:

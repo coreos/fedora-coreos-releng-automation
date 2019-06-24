@@ -23,7 +23,7 @@ WORKDIR /work
 RUN sed -e "s/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/$(uuidgen)/g" /etc/fedora-messaging/fedora.toml > /work/my_config.toml
 
 # Set the Application Name
-RUN sed -i 's|Example Application|CoreOS Koji Tagger: https://pagure.io/dusty/coreos-koji-tagger|' /work/my_config.toml
+RUN sed -i 's|Example Application|Fedora CoreOS Koji Tagger: https://github.com/coreos/fedora-coreos-koji-tagger|' /work/my_config.toml
 
 # Lower log levels to WARNING level
 RUN sed -i 's/INFO/WARNING/' /work/my_config.toml
