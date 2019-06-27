@@ -30,7 +30,7 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 
 # if we are in a stage environment then use the
 # stage koji as well as the staging kerberos
-if os.getenv('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
+if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
     KERBEROS_DOMAIN = 'STG.FEDORAPROJECT.ORG'
 else:
