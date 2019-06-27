@@ -3,9 +3,6 @@ name: coreos-koji-tagger
 deploymentConfigs:
   - containers:
     - image: ""
-#      envFrom:
-#      - secretRef:
-#          name: pagure-token
     triggers:
       - type: ImageChange
         imageChangeParams:
@@ -15,7 +12,3 @@ deploymentConfigs:
           from:
             kind: ImageStreamTag
             name: coreos-koji-tagger-img:latest
-#secrets:
-#  - name: pagure-token
-#    data:
-#      PAGURE_TOKEN: [[ PAGURE_TOKEN ]]
