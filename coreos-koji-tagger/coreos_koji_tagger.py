@@ -33,7 +33,7 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
     KERBEROS_DOMAIN = 'STG.FEDORAPROJECT.ORG'
-    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.stg.phx2.fedoraproject.org'
+    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.stg.fedoraproject.org'
 else:
     KOJI_CMD = '/usr/bin/koji'
     KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
