@@ -33,12 +33,11 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
     KERBEROS_DOMAIN = 'STG.FEDORAPROJECT.ORG'
+    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.stg.phx2.fedoraproject.org'
 else:
     KOJI_CMD = '/usr/bin/koji'
     KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
-
-# The name of the FAS user account associated with the keytab
-KOJI_COREOS_USER = 'coreosbot'
+    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.phx2.fedoraproject.org'
 
 GIT_REPO_DOMAIN   = 'https://pagure.io/'
 GIT_REPO_FULLNAME = 'dusty/coreos-koji-data'
@@ -105,11 +104,14 @@ class Consumer(object):
     def __init__(self):
         self.target_tag        = KOJI_TARGET_TAG
         self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
-        self.koji_user = KOJI_COREOS_USER
         self.kerberos_domain   = KERBEROS_DOMAIN
         self.git_repo_domain   = GIT_REPO_DOMAIN
         self.git_repo_fullname = GIT_REPO_FULLNAME
         self.git_repo_branch   = GIT_REPO_BRANCH
+
+        # Allow overriding koji user
+        self.koji_user         = os.environ.get(
+                                    'COREOS_KOJI_USER', COREOS_KOJI_USER)
 
         # If a keytab was specified let's use it
         self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
