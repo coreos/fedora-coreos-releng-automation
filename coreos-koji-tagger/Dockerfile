@@ -5,12 +5,12 @@ FROM registry.fedoraproject.org/fedora:30
 ENV PYTHONUNBUFFERED=true
 
 # Install pagure/fedmsg libraries
-RUN dnf -y install python3-libpagure fedora-messaging koji krb5-workstation && dnf clean all
+RUN dnf -y install dnf-plugins-core python3-libpagure fedora-messaging koji krb5-workstation && dnf clean all
 
-# Grab the kerberos configuration. Pulling directly from upstream
-# here rather than installing the fedora-packager rpm because it's
-# a bunch of deps and we only need one file.
-RUN curl -L https://pagure.io/fedora-packager/raw/master/f/krb-configs/fedoraproject_org > /etc/krb5.conf.d/fedoraproject_org
+# Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
+# installing the fedora-packager rpm. We don't need the deps because
+# we aren't building anything.
+RUN dnf download fedora-packager && rpm -ivh --nodeps fedora-packager*rpm && rm fedora-packager*rpm && dnf clean all
 
 RUN mkdir /work
 WORKDIR /work
