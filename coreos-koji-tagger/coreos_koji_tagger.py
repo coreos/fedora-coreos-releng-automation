@@ -373,7 +373,7 @@ def get_buildsinfo_from_rpmnevras(rpmnevras: set) -> dict:
     # and buildroot tag name) for all rpmnvras
     #
     # Usage: koji rpminfo [options] <n-v-r.a> [<n-v-r.a> ...]
-    cmd = f'/usr/bin/koji rpminfo'.split(' ')
+    cmd = f'{KOJI_CMD} rpminfo'.split(' ')
     cmd+= rpmnvras
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
 
@@ -429,7 +429,7 @@ def get_tagged_builds(tag: str) -> list:
     #   kernel-5.0.11-300.fc30                    coreos-pool           labbott
     # 
     # Usage: koji list-tagged [options] tag [package]
-    cmd = f'/usr/bin/koji list-tagged {tag} --quiet'.split(' ')
+    cmd = f'{KOJI_CMD} list-tagged {tag} --quiet'.split(' ')
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
@@ -437,7 +437,7 @@ def get_pkgs_in_tag(tag: str) -> list:
     if not tag:
         raise
     # Usage: koji list-pkgs [options]
-    cmd = f'/usr/bin/koji list-pkgs --tag={tag} --quiet'.split(' ')
+    cmd = f'{KOJI_CMD} list-pkgs --tag={tag} --quiet'.split(' ')
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
@@ -445,7 +445,7 @@ def tag_builds(tag: str, builds: list):
     if not tag or not builds:
         raise
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
-    cmd = f'/usr/bin/koji tag-build {tag}'.split(' ')
+    cmd = f'{KOJI_CMD} tag-build {tag}'.split(' ')
     cmd.extend(builds)
     runcmd(cmd, check=True)
 
@@ -453,13 +453,13 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     if not tag or not pkgs or not owner:
         raise
     # Usage: koji add-pkg [options] tag package [package2 ...]
-    cmd = f'/usr/bin/koji add-pkg {tag} --owner {owner}'.split(' ')
+    cmd = f'{KOJI_CMD} add-pkg {tag} --owner {owner}'.split(' ')
     cmd.extend(pkgs)
     runcmd(cmd, check=True)
 
 def check_koji_connection(check: bool = False) -> subprocess.CompletedProcess:
     # Usage: koji moshimoshi [options]
-    cmd = f'/usr/bin/koji moshimoshi'.split(' ')
+    cmd = f'{KOJI_CMD} moshimoshi'.split(' ')
     cp = runcmd(cmd, check=check, capture_output=True)
     return cp
 
