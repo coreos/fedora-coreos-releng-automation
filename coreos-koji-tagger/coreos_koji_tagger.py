@@ -32,12 +32,13 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 # stage koji as well as the staging kerberos
 if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
-    KERBEROS_DOMAIN = 'STG.FEDORAPROJECT.ORG'
-    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.stg.fedoraproject.org'
 else:
     KOJI_CMD = '/usr/bin/koji'
-    KERBEROS_DOMAIN = 'FEDORAPROJECT.ORG'
-    COREOS_KOJI_USER = 'coreos-koji-tagger/coreos-koji-tagger.phx2.fedoraproject.org'
+
+# This user will be the owner of a pkg in a tag
+# To view existing owners run:
+#    - koji list-pkgs --tag=coreos-pool
+COREOS_KOJI_USER = 'coreosbot'
 
 GIT_REPO_DOMAIN   = 'https://pagure.io/'
 GIT_REPO_FULLNAME = 'dusty/coreos-koji-data'
@@ -108,10 +109,7 @@ class Consumer(object):
         self.git_repo_domain   = GIT_REPO_DOMAIN
         self.git_repo_fullname = GIT_REPO_FULLNAME
         self.git_repo_branch   = GIT_REPO_BRANCH
-
-        # Allow overriding koji user
-        self.koji_user         = os.environ.get(
-                                    'COREOS_KOJI_USER', COREOS_KOJI_USER)
+        self.koji_user         = COREOS_KOJI_USER
 
         # If a keytab was specified let's use it
         self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
