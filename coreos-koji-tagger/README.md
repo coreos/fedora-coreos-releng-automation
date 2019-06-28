@@ -51,7 +51,7 @@ podman run -it --rm -v $PWD/:/pwd/ \
            -e COREOS_KOJI_TAGGER_KEYTAB_FILE=/pwd/$keytab ckt
 ```
 
-If you'd like you can add `--entrypoint=/bin/bash` and run the
-coreos_koji_tagger directly. If you modify the json at the bottom
+If you'd like you can add `--entrypoint=/bin/bash` and run 
+`/pwd/coreos_koji_tagger.py` directly. If you modify the json at the bottom
 of the file you can test it out or actually have it call koji
 to apply tags.
