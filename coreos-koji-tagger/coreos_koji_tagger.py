@@ -15,7 +15,7 @@ import requests
 
 # Set local logging 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # The target and the intermediate tag. The target tag is where we want
 # builds to end up. We'll check the target tag to see if builds are already
