@@ -242,10 +242,37 @@ class Consumer(object):
                         tag_builds(tag=tag, builds=buildstotagforthisrelease)
             logger.info('Tagging done')
 
+    def find_principal_from_keytab(self) -> str:
+        # Find the pricipal/realm that the keytab is for
+        cmd = f'/usr/bin/klist -k {self.keytab_file}'
+        cp = runcmd(cmd.split(' '), capture_output=True, check=True)
+
+        # The output is in the form:
+        #
+        # # klist -k coreosbot.keytab
+        # Keytab name: FILE:coreosbot.keytab
+        # KVNO Principal
+        # ---- --------------------------------------------------------------------------
+        #    3 coreosbot@FEDORAPROJECT.ORG
+        #    3 coreosbot@FEDORAPROJECT.ORG
+        #    3 coreosbot@FEDORAPROJECT.ORG
+        #    3 coreosbot@FEDORAPROJECT.ORG
+        #
+        # Grab the last line and use that.
+        line = cp.stdout.decode('utf-8').rstrip().splitlines()[-1]
+
+        # The principal will be the last column in that line
+        principal = line.split(' ')[-1]
+        logger.debug(f'Found principal {principal} in keytab')
+        return principal
+
     def kinit(self):
         logger.info(f'Authenticating with keytab: {self.keytab_file}')
-        cmd = f'/usr/bin/kinit -k -t {self.keytab_file}'
-        cmd += f' {self.koji_user}@{self.kerberos_domain}'
+        # find principal first
+        principal = self.find_principal_from_keytab()
+        logger.info(f'Using principal {principal}')
+        # then Auth
+        cmd = f'/usr/bin/kinit -k -t {self.keytab_file} {principal}'
         runcmd(cmd.split(' '), check=True)
         check_koji_connection(check=True) # Make sure it works
 
