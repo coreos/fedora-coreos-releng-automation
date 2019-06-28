@@ -15,7 +15,7 @@ import requests
 
 # Set local logging 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 # The target and the intermediate tag. The target tag is where we want
 # builds to end up. We'll check the target tag to see if builds are already
@@ -510,6 +510,14 @@ if __name__ == '__main__':
     [
       "linux-atm-libs-2.5.1-21.fc29.x86_64",
       "sha256:7dfd2156bd09e02a93a54eedea533b44afc41d06df28f2add364e5327b27c0f7"
+    ],
+    [
+      "systemd-241-6.gita2eaa1c.fc30.x86_64",
+      "sha256:null"
+    ],
+    [
+      "kernel-5.1.11-300.fc30.x86_64",
+      "sha256:null"
     ],
     [
       "afterburn-4.1.0-2.module_f30+4375+41ed41a6.x86_64",
