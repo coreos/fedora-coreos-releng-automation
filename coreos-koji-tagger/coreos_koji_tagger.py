@@ -105,7 +105,6 @@ class Consumer(object):
     def __init__(self):
         self.target_tag        = KOJI_TARGET_TAG
         self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
-        self.kerberos_domain   = KERBEROS_DOMAIN
         self.git_repo_domain   = GIT_REPO_DOMAIN
         self.git_repo_fullname = GIT_REPO_FULLNAME
         self.git_repo_branch   = GIT_REPO_BRANCH
