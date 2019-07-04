@@ -1,0 +1,367 @@
+#!/usr/bin/python3 -u
+
+import os
+import re
+import sys
+import json
+import toml
+import fnmatch
+import aiohttp
+import asyncio
+import argparse
+import tempfile
+import subprocess
+
+
+DEFAULT_CONFIG_FILE_PATH = "/etc/config-bot.toml"
+
+git = None
+
+
+def main():
+    args = parse_args()
+    cfg = load_config(args.config)
+
+    global git
+    git = Git(cfg['git'])
+
+    loop = asyncio.get_event_loop()
+
+    o = cfg.get('sync-build-lockfiles')
+    if o is not None:
+        loop.create_task(sync_build_lockfiles(o))
+
+    o = cfg.get('promote-lockfiles')
+    if o is not None:
+        loop.create_task(promote_lockfiles(o))
+
+    o = cfg.get('propagate-files')
+    if o is not None:
+        loop.create_task(propagate_files(o))
+
+    loop.run_forever()
+    loop.close()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', help="Path to TOML config file",
+                        default=DEFAULT_CONFIG_FILE_PATH)
+    return parser.parse_args()
+
+
+def load_config(fn):
+    with open(fn) as f:
+        return toml.load(f)
+
+
+async def sync_build_lockfiles(cfg):
+    # this is the only mode we support right now
+    assert cfg['trigger']['mode'] == 'periodic'
+    period = period_to_seconds(cfg['trigger']['period'])
+    method = cfg['method']
+
+    base_url = cfg['builds-base-url']
+
+    # {stream -> buildid}
+    last_build_ids = {}
+
+    first = True
+    while True:
+
+        # for easier hacking; just act immediately on first iteration
+        # this allows us to safely use `continue` afterwards
+        if not first:
+            await asyncio.sleep(period)
+        first = False
+
+        for stream in cfg['streams']:
+            builds_json = f'{base_url}/{stream}/builds/builds.json'
+            builds = json.loads(await http_fetch(builds_json))
+            if builds is None:
+                # problem fetching the json; just ignore and we'll retry
+                continue
+            elif len(builds['builds']) == 0:
+                eprint(f"Stream {stream} has no builds!")
+                continue
+
+            latest_build_id = builds['builds'][0]
+
+            # is this a new build?
+            if latest_build_id == last_build_ids.get(stream):
+                continue
+
+            synced = await sync_one_build_lockfile(base_url, method, stream,
+                                                   latest_build_id)
+            if synced:
+                last_build_ids[stream] = latest_build_id
+
+
+async def http_fetch(url):
+    async with aiohttp.request(url=url, method='GET') as resp:
+        if resp.status != 200:
+            eprint(f"Error fetching {url}: got {resp.status}")
+            return None
+        return await resp.read()
+
+
+async def sync_one_build_lockfile(base_url, method, stream, build_id):
+    # we only support direct git pushes for now
+    assert method == 'push'
+
+    # XXX: update for new multi-arch build layout when FCOS is migrated
+    build_dir = f'{base_url}/{stream}/builds/{build_id}'
+    lockfile = 'manifest-lock.generated.x86_64.json'
+    data = await http_fetch(f'{build_dir}/{lockfile}')
+    if data is None:
+        # got an error while fetching, just leave and we'll retry later
+        # should probably use a custom Exception for this
+        return False
+
+    async with git:
+        git.checkout(stream)
+        with open(git.path(lockfile), 'wb') as f:
+            f.write(data)
+
+        if git.has_diff():
+            git.commit(f"lockfiles: import from build {build_id}", [lockfile])
+            try:
+                git.push(stream)
+            except Exception as e:
+                # this can happen if we raced against someone/something
+                # else pushing to the ref and we're out of date; we'll retry
+                print(f"Got exception during push: {e}")
+                return False
+
+    return True
+
+
+async def promote_lockfiles(cfg):
+    # this is the only mode we support right now
+    assert cfg['trigger']['mode'] == 'periodic'
+    period = period_to_seconds(cfg['trigger']['period'])
+
+    # we only support direct git pushes for now
+    assert cfg['method'] == 'push'
+
+    source_ref, target_ref = (cfg['source-ref'], cfg['target-ref'])
+
+    last_source_ref_checksum = None
+
+    first = True
+    while True:
+
+        if not first:
+            await asyncio.sleep(period)
+        first = False
+
+        async with git:
+            # is there a new commit?
+            source_ref_checksum = git.rev_parse(source_ref)
+            if last_source_ref_checksum == source_ref_checksum:
+                continue
+
+            git.checkout(target_ref)
+
+            # get the list of lockfiles from the source ref
+            all_files = git.cmd_output('ls-tree', source_ref,
+                                       '--name-only').splitlines()
+            locks = [f for f in all_files if
+                     matches_patterns(f, ['manifest-lock.generated.*.json'])]
+
+            if len(locks) == 0:
+                eprint(f"No lockfiles found in {source_ref}")
+                last_source_ref_checksum = source_ref_checksum
+                continue
+
+            # bring it into the index
+            git.cmd('checkout', source_ref, '--', *locks)
+
+            # and rename it to the non-generated version
+            for lock in locks:
+                git.cmd('mv', '--force', lock, lock.replace('.generated', ''))
+
+            if git.has_diff():
+                git.commit(f"lockfiles: import from {source_ref}")
+                try:
+                    git.push(target_ref)
+                except Exception as e:
+                    print(f"Got exception during push: {e}")
+                    continue
+
+            last_source_ref_checksum = source_ref_checksum
+
+
+async def propagate_files(cfg):
+    # this is the only mode we support right now
+    assert cfg['trigger']['mode'] == 'periodic'
+    period = period_to_seconds(cfg['trigger']['period'])
+    skip_files = cfg['skip-files']
+
+    # we only support direct git pushes for now
+    assert cfg['method'] == 'push'
+
+    source_ref, target_refs = (cfg['source-ref'], cfg['target-refs'])
+
+    last_source_ref_checksum = None
+
+    first = True
+    while True:
+
+        if not first:
+            await asyncio.sleep(period)
+        first = False
+
+        async with git:
+            # is there a new commit?
+            source_ref_checksum = git.rev_parse(source_ref)
+            if last_source_ref_checksum == source_ref_checksum:
+                continue
+
+            # get the list of files from the source ref
+            all_files = git.cmd_output('ls-tree', source_ref,
+                                       '--name-only').splitlines()
+            targeted_files = [f for f in all_files
+                              if not matches_patterns(f, skip_files)]
+
+            if len(targeted_files) == 0:
+                eprint(f"No files to propagate from {source_ref}")
+                last_source_ref_checksum = source_ref_checksum
+                continue
+
+            for target_ref in target_refs:
+                git.checkout(target_ref)
+
+                # bring files into the index
+                git.cmd('checkout', source_ref, '--', *targeted_files)
+
+                if git.has_diff():
+                    git.commit(f"tree: import changes from {source_ref}")
+                    try:
+                        git.push(target_ref)
+                    except Exception as e:
+                        print(f"Got exception during push: {e}")
+                        break
+            else:
+                last_source_ref_checksum = source_ref_checksum
+
+
+def matches_patterns(fn, patterns):
+    for pattern in patterns:
+        if fnmatch.fnmatch(fn, pattern):
+            return True
+    return False
+
+
+# normalize to seconds
+def period_to_seconds(s):
+    assert re.match('^[0-9]+[smh]$', s)
+    multi = {"s": 1, "m": 60, "h": 60*60}
+    return int(s[:-1]) * multi[s[-1:]]
+
+
+def eprint(*args):
+    print(*args, file=sys.stderr)
+
+
+class Git:
+
+    '''
+        Convenience wrapper around shared git repo. To categorically rule out
+        leftovers/workdirs left in funky states from various operations, and
+        ensuring we always push what we mean, we use one main bare repo to
+        share objects, but do all the work in transient worktrees.
+    '''
+
+    def __init__(self, cfg):
+        self._git_bare = tempfile.TemporaryDirectory(prefix="config-bot.bare.")
+        self._git_work = None
+
+        self._git_env = dict(os.environ)
+        self._git_env.update({
+            "GIT_AUTHOR_NAME": cfg['author']['name'],
+            "GIT_AUTHOR_EMAIL": cfg['author']['email'],
+            "GIT_COMMITTER_NAME": cfg['author']['name'],
+            "GIT_COMMITTER_EMAIL": cfg['author']['email'],
+        })
+
+        gh_owner = cfg['github']['repo']['owner']
+        gh_name = cfg['github']['repo']['name']
+        token_un = cfg['github']['token']['username']
+        with open(cfg['github']['token']['path']) as f:
+            token_pw = f.read().strip()
+
+        url = f'https://{token_un}:{token_pw}@github.com/{gh_owner}/{gh_name}'
+        self.cmd('clone', '--bare', url, '.')
+
+        # we don't technically need a lockfile if we make sure that we never
+        # `await` operations when using `with git`, though that's something I
+        # can easily imagine regressing on
+        self._lock = asyncio.Lock()
+
+    def __del__(self):
+        self._git_bare.cleanup()
+
+    async def __aenter__(self):
+        await self._lock.acquire()
+        self.cmd('fetch', 'origin', '--prune', '+refs/heads/*:refs/heads/*')
+        assert self._git_work is None
+        d = tempfile.TemporaryDirectory(prefix="config-bot.work.")
+        self.cmd('worktree', 'add', '--detach', d.name, 'HEAD')
+        self._git_work = d
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self._git_work.cleanup()
+        self._git_work = None
+        self.cmd('worktree', 'prune')
+        self._lock.release()
+
+    def cmd(self, *args):
+        wd = self._git_work or self._git_bare
+        subprocess.check_call(['git', *args], cwd=wd.name, env=self._git_env)
+
+    def cmd_output(self, *args):
+        wd = self._git_work or self._git_bare
+        out = subprocess.check_output(['git', *args], cwd=wd.name,
+                                      env=self._git_env)
+        return out.strip().decode('utf-8')
+
+    def rev_parse(self, ref):
+        return self.cmd_output('rev-parse', ref)
+
+    def checkout(self, ref):
+        self.cmd('checkout', '--detach', ref)
+
+    def commit(self, message, files=None):
+        if files and len(files) > 0:
+            self.cmd('add', *files)
+        self.cmd('commit', '-m', message)
+
+    def push(self, ref):
+        self.cmd('push', 'origin', f'HEAD:{ref}')
+
+    def path(self, file=None):
+        wd = self._git_work or self._git_bare
+        if file is None:
+            return wd.name
+        return os.path.join(wd.name, file)
+
+    def has_diff(self):
+        # use ls-files instead of `diff --exit-code` so new untracked files
+        # also count as a "diff"
+        out = self.cmd_output('ls-files', '--modified', '--others').strip()
+        out.strip()
+        if len(out) > 0:
+            return True
+
+        # but also check whether we have things staged
+        out = self.cmd_output('diff', '--staged', '--name-only')
+        out.strip()
+        if len(out) > 0:
+            return True
+
+        return False
+
+
+if __name__ == "__main__":
+    sys.exit(main())

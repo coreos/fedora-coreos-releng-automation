@@ -1,0 +1,36 @@
+[git]
+author.name = 'CoreOS Bot'
+author.email = 'coreosbot@fedoraproject.org'
+github.repo.owner = 'coreos'
+github.repo.name = 'fedora-coreos-config'
+github.token.username = 'coreosbot'
+github.token.path = '/var/run/secrets/coreos.fedoraproject.org/github-token/token'
+
+[sync-build-lockfiles]
+builds-base-url = 'https://builds.coreos.fedoraproject.org/prod/streams'
+streams = [
+    'bodhi-updates',
+]
+trigger.mode = 'periodic'
+trigger.period = '15m'
+method = 'push'
+
+[promote-lockfiles]
+source-ref = 'bodhi-updates'
+target-ref = 'testing-devel'
+trigger.mode = 'periodic'
+trigger.period = '24h'
+method = 'push'
+
+[propagate-files]
+source-ref = 'testing-devel'
+target-refs = [
+    'bodhi-updates',
+]
+skip-files = [
+    'manifest.yaml',
+    'manifest-lock.*',
+]
+trigger.mode = 'periodic'
+trigger.period = '15m'
+method = 'push'
