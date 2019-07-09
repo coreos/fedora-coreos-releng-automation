@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: fedora-coreos-config-bot-template
+  annotations:
+    description: |-
+      Fedora CoreOS Config Bot
+parameters:
+  - description: Git source URI for Dockerfile
+    name: REPO_URL
+    value: https://github.com/coreos/fedora-coreos-releng-automation
+  - description: Git branch/tag reference for Dockerfile
+    name: REPO_REF
+    value: master
+  - description: GitHub webhook secret
+    name: GITHUB_WEBHOOK_SECRET
+    from: '[A-Z0-9]{32}'
+    generate: expression
+objects:
+  - kind: ImageStream
+    apiVersion: v1
+    metadata:
+      name: config-bot
+    spec:
+      lookupPolicy:
+        local: true
+  - kind: BuildConfig
+    apiVersion: v1
+    metadata:
+      name: config-bot
+    spec:
+      triggers:
+      - type: ConfigChange
+      - type: GitHub
+        github:
+          secret: ${GITHUB_WEBHOOK_SECRET}
+      source:
+        type: Git
+        git:
+          uri: ${REPO_URL}
+          ref: ${REPO_REF}
+        contextDir: config-bot
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile
+      output:
+        to:
+          kind: ImageStreamTag
+          name: config-bot:latest
+      successfulBuildsHistoryLimit: 2
+      failedBuildsHistoryLimit: 2
+  - kind: DeploymentConfig
+    apiVersion: v1
+    metadata:
+      name: config-bot
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          labels:
+            name: config-bot
+        spec:
+          containers:
+            - name: config-bot
+              image: config-bot
+              volumeMounts:
+                - name: github-token-mount
+                  mountPath: /var/run/secrets/coreos.fedoraproject.org/github-token
+                  readOnly: true
+          volumes:
+          - name: github-token-mount
+            secret:
+              secretName: config-bot-github-token
+      triggers:
+        - type: ConfigChange
+        - type: ImageChange
+          imageChangeParams:
+            automatic: true
+            containerNames:
+              - config-bot
+            from:
+              kind: ImageStreamTag
+              name: config-bot:latest
