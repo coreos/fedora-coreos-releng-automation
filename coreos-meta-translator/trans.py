@@ -29,7 +29,7 @@ parser.add_argument("--workdir", help="cosa workdir", required=True)
 parser.add_argument("--build-id", help="build id", required=False)
 args = parser.parse_args()
 
-archs = []
+arches = []
 
 with open(os.path.join(args.workdir, "builds", "builds.json"), 'r') as build_file:
     build_json = json.load(build_file)
@@ -43,7 +43,7 @@ with open(os.path.join(args.workdir, "builds", "builds.json"), 'r') as build_fil
                 if build.get('id') == args.build_id:
                     individual_build = build
                     break
-        archs = individual_build.get('archs')
+        arches = individual_build.get('arches')
 
 outer_dir = os.path.join(args.workdir, "builds", args.build_id)
 release_file = os.path.join(outer_dir, "release.json")
@@ -53,7 +53,7 @@ if os.path.exists(release_file):
     with open(release_file, 'r') as w:
         out = json.load(w)
 
-files = [os.path.join(outer_dir, arch, "meta.json") for arch in archs]
+files = [os.path.join(outer_dir, arch, "meta.json") for arch in arches]
 
 for f in files:
     with open(f, 'r') as w:
