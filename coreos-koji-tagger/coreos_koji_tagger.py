@@ -347,6 +347,10 @@ def get_releasever_from_buildroottag(buildroottag: str) -> str:
         # example: module-afterburn-rolling-3020190524194016-2c789dff-build
         releasever = re.search('module-afterburn-rolling-(\d\d)',
                                                 buildroottag).group(1)
+    elif 'zincati' in buildroottag:
+        # example: module-zincati-rolling-3020190711144249-a23e773d-build
+        releasever = re.search('module-zincati-rolling-(\d\d)',
+                                                buildroottag).group(1)
     else:
         # example: f30-build
         releasever = re.search('f(\d\d)', buildroottag).group(1)
