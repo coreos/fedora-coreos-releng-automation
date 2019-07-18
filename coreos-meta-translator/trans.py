@@ -43,6 +43,7 @@ with open(os.path.join(args.workdir, "builds", "builds.json"), 'r') as build_fil
                 if build.get('id') == args.build_id:
                     individual_build = build
                     break
+        print(f"Creating release.json for build {individual_build['id']} ")
         arches = individual_build.get('arches')
 
 outer_dir = os.path.join(args.workdir, "builds", args.build_id)
@@ -52,6 +53,7 @@ out = {}
 if os.path.exists(release_file):
     with open(release_file, 'r') as w:
         out = json.load(w)
+        print(f"Using existing release file {release_file}")
 
 files = [os.path.join(outer_dir, arch, "meta.json") for arch in arches]
 
@@ -64,12 +66,15 @@ for f in files:
         ensure_dup(input_, out, "buildid", "release")
         ensure_dup(input_.get('coreos-assembler.container-config-git'), out, 'branch', 'stream')
 
+        print(f"{out['stream']} stream")
+        print(f"  {arch} images:")
         # build the architectures dict
         arch_dict = {"media": {}}
         ensure_dup(input_, arch_dict, "ostree-commit", "commit")
         generic_arches = ["aws", "qemu", "metal", "openstack", "vmware"]
         for ga in generic_arches:
             if input_.get("images", {}).get(ga, None) is not None:
+                print(f"   - {ga}")
                 i = input_.get("images").get(ga)
                 ext = get_extension(i.get('path'), ga)
                 arch_dict['media'][ga] = {
@@ -140,3 +145,4 @@ for f in files:
 
 with open(release_file, 'w') as w:
     json.dump(out, w)
+    print(f"Successfully wrote release file at {release_file}")
