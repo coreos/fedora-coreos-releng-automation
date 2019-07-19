@@ -85,14 +85,14 @@ async def sync_build_lockfiles(cfg):
                 eprint(f"Stream {stream} has no builds!")
                 continue
 
-            latest_build_id = builds['builds'][0]
+            latest_build = builds['builds'][0]
+            latest_build_id = latest_build['id']
 
             # is this a new build?
             if latest_build_id == last_build_ids.get(stream):
                 continue
 
-            synced = await sync_one_build_lockfile(base_url, method, stream,
-                                                   latest_build_id)
+            synced = await do_sync(base_url, method, stream, latest_build)
             if synced:
                 last_build_ids[stream] = latest_build_id
 
@@ -105,26 +105,31 @@ async def http_fetch(url):
         return await resp.read()
 
 
-async def sync_one_build_lockfile(base_url, method, stream, build_id):
+async def do_sync(base_url, method, stream, build):
     # we only support direct git pushes for now
     assert method == 'push'
 
-    # XXX: update for new multi-arch build layout when FCOS is migrated
+    build_id = build["id"]
     build_dir = f'{base_url}/{stream}/builds/{build_id}'
-    lockfile = 'manifest-lock.generated.x86_64.json'
-    data = await http_fetch(f'{build_dir}/{lockfile}')
-    if data is None:
-        # got an error while fetching, just leave and we'll retry later
-        # should probably use a custom Exception for this
-        return False
+
+    lockfiles = {}
+    for arch in build['arches']:
+        path = f'manifest-lock.generated.{arch}.json'
+        lockfiles[path] = await http_fetch(f'{build_dir}/{arch}/{path}')
+        if lockfiles[path] is None:
+            # got an error while fetching, just leave and we'll retry later
+            # should probably use a custom Exception for this
+            return False
 
     async with git:
         git.checkout(stream)
-        with open(git.path(lockfile), 'wb') as f:
-            f.write(data)
+        for path, data in lockfiles.items():
+            with open(git.path(path), 'wb') as f:
+                f.write(data)
 
         if git.has_diff():
-            git.commit(f"lockfiles: import from build {build_id}", [lockfile])
+            git.commit(f"lockfiles: import from build {build_id}",
+                       lockfiles.keys())
             try:
                 git.push(stream)
             except Exception as e:
