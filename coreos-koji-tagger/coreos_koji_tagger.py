@@ -351,6 +351,10 @@ def get_releasever_from_buildroottag(buildroottag: str) -> str:
         # example: module-zincati-rolling-3020190711144249-a23e773d-build
         releasever = re.search('module-zincati-rolling-(\d\d)',
                                                 buildroottag).group(1)
+    elif 'fedora-coreos-pinger' in buildroottag:
+        # example: module-fedora-coreos-pinger-rolling-3020190720131029-a23e773d-build
+        releasever = re.search('module-fedora-coreos-pinger-rolling-(\d\d)',
+                                                buildroottag).group(1)
     else:
         # example: f30-build
         releasever = re.search('f(\d\d)', buildroottag).group(1)
