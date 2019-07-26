@@ -31,8 +31,8 @@ RUN sed -i 's/INFO/WARNING/' /work/my_config.toml
 # Set the format for the log messages
 RUN sed -i 's/format =.*$/format = "%(asctime)s %(levelname)s %(name)s - %(message)s"/' /work/my_config.toml
 
-# We only care about pungi.compose.status.change messages
-RUN sed -i 's/^routing_keys.*$/routing_keys = ["io.pagure.prod.pagure.git.receive"]/' /work/my_config.toml
+# We only care about org.fedoraproject.prod.github.push messages
+RUN sed -i 's/^routing_keys.*$/routing_keys = ["org.fedoraproject.prod.github.push"]/' /work/my_config.toml
 
 # Put compose-tracker into a location that can be imported
 ADD coreos_koji_tagger.py /usr/lib/python3.7/site-packages/

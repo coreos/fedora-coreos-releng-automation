@@ -40,59 +40,144 @@ else:
 #    - koji list-pkgs --tag=coreos-pool
 COREOS_KOJI_USER = 'coreosbot'
 
-GIT_REPO_DOMAIN   = 'https://pagure.io/'
-GIT_REPO_FULLNAME = 'dusty/coreos-koji-data'
-GIT_REPO_BRANCH   = 'master'
+# XXX: should be in config file
+GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
+GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
 
-# We are processing the io.pagure.prod.pagure.git.receive topic
-# https://apps.fedoraproject.org/datagrepper/raw?topic=io.pagure.prod.pagure.git.receive&delta=100000
+# We are processing the org.fedoraproject.prod.github.push topic
+# https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
 EXAMPLE_MESSAGE_BODY = json.loads("""
 {
-    "forced": false,
-    "agent": "dustymabe",
-    "repo": {
-      "custom_keys": [],
-      "description": "coreos-koji-data",
-      "parent": null,
-      "date_modified": "1558714988",
-      "access_users": {
-        "admin": [],
-        "commit": [],
-        "ticket": [],
-        "owner": [
-          "dustymabe"
-        ]
-      },
-      "namespace": "dusty",
-      "priorities": {},
-      "id": 6234,
-      "access_groups": {
-        "admin": [],
-        "commit": [],
-        "ticket": []
-      },
-      "milestones": {},
-      "user": {
-        "fullname": "Dusty Mabe",
-        "name": "dustymabe"
-      },
-      "date_created": "1558714988",
-      "fullname": "dusty/coreos-koji-data",
-      "url_path": "dusty/coreos-koji-data",
-      "close_status": [],
-      "tags": [],
-      "name": "coreos-koji-data"
+  "forced": false,
+  "compare": "https://github.com/coreos/fedora-coreos-config/compare/b7205807daab...17f8d4c15a28",
+  "pusher": {
+    "email": "coreosbot@users.noreply.github.com",
+    "name": "coreosbot"
+  },
+  "sender": {
+    "url": "https://api.github.com/users/coreosbot",
+    "site_admin": false,
+    "html_url": "https://github.com/coreosbot",
+    "node_id": "MDQ6VXNlcjYxNDg4NTA=",
+    "gravatar_id": "",
+    "login": "coreosbot",
+    "type": "User",
+    "id": 6148850
+  },
+  "repository": {
+    "has_wiki": true,
+    "has_pages": false,
+    "updated_at": "2019-07-22T19:47:35Z",
+    "private": false,
+    "disabled": false,
+    "full_name": "coreos/fedora-coreos-config",
+    "owner": {
+      "name": "coreos",
+      "url": "https://api.github.com/users/coreos",
+      "site_admin": false,
+      "html_url": "https://github.com/coreos",
+      "email": null,
+      "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=",
+      "gravatar_id": "",
+      "login": "coreos",
+      "type": "Organization",
+      "id": 3730757
     },
-    "end_commit": "db5c806769a5ab35bfeb15e1ac7c727ec1275b23",
-    "branch": "master",
-    "authors": [
-      {
-        "fullname": "Dusty Mabe",
-        "name": "dustymabe"
-      }
+    "id": 145484028,
+    "size": 123,
+    "archived": false,
+    "has_projects": false,
+    "watchers_count": 25,
+    "forks": 32,
+    "homepage": null,
+    "fork": false,
+    "description": "Base configuration for Fedora CoreOS",
+    "has_downloads": true,
+    "forks_count": 32,
+    "default_branch": "testing-devel",
+    "html_url": "https://github.com/coreos/fedora-coreos-config",
+    "node_id": "MDEwOlJlcG9zaXRvcnkxNDU0ODQwMjg=",
+    "has_issues": true,
+    "master_branch": "testing-devel",
+    "stargazers_count": 25,
+    "name": "fedora-coreos-config",
+    "open_issues_count": 10,
+    "watchers": 25,
+    "language": "Shell",
+    "license": {
+      "spdx_id": "NOASSERTION",
+      "url": null,
+      "node_id": "MDc6TGljZW5zZTA=",
+      "name": "Other",
+      "key": "other"
+    },
+    "url": "https://github.com/coreos/fedora-coreos-config",
+    "stargazers": 25,
+    "created_at": 1534810727,
+    "pushed_at": 1564157477,
+    "open_issues": 10,
+    "organization": "coreos"
+  },
+  "created": false,
+  "deleted": false,
+  "commits": [
+    {
+      "committer": {
+        "email": "coreosbot@fedoraproject.org",
+        "name": "CoreOS Bot"
+      },
+      "added": [],
+      "author": {
+        "email": "coreosbot@fedoraproject.org",
+        "name": "CoreOS Bot"
+      },
+      "distinct": true,
+      "timestamp": "2019-07-26T16:11:15Z",
+      "modified": [
+        "manifest-lock.generated.x86_64.json"
+      ],
+      "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
+      "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
+      "message": "lockfiles: import from build 30.20190725.dev.0",
+      "removed": [],
+      "id": "17f8d4c15a28864c8229906a5723b8de9e00804a"
+    }
+  ],
+  "after": "17f8d4c15a28864c8229906a5723b8de9e00804a",
+  "fas_usernames": {
+    "coreos": "github_org_coreos"
+  },
+  "head_commit": {
+    "committer": {
+      "email": "coreosbot@fedoraproject.org",
+      "name": "CoreOS Bot"
+    },
+    "added": [],
+    "author": {
+      "email": "coreosbot@fedoraproject.org",
+      "name": "CoreOS Bot"
+    },
+    "distinct": true,
+    "timestamp": "2019-07-26T16:11:15Z",
+    "modified": [
+      "manifest-lock.generated.x86_64.json"
     ],
-    "total_commits": 1,
-    "start_commit": "db5c806769a5ab35bfeb15e1ac7c727ec1275b23"
+    "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
+    "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
+    "message": "lockfiles: import from build 30.20190725.dev.0",
+    "removed": [],
+    "id": "17f8d4c15a28864c8229906a5723b8de9e00804a"
+  },
+  "organization": {
+    "url": "https://api.github.com/orgs/coreos",
+    "login": "coreos",
+    "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=",
+    "description": "Key components to secure, simplify and automate your container infrastructure",
+    "id": 3730757
+  },
+  "ref": "refs/heads/testing-devel",
+  "base_ref": null,
+  "before": "b7205807daab0bbe1a3e65383b5155c2e37f03c6"
 }
 """
 )
@@ -105,9 +190,8 @@ class Consumer(object):
     def __init__(self):
         self.target_tag        = KOJI_TARGET_TAG
         self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
-        self.git_repo_domain   = GIT_REPO_DOMAIN
-        self.git_repo_fullname = GIT_REPO_FULLNAME
-        self.git_repo_branch   = GIT_REPO_BRANCH
+        self.github_repo_fullname  = GITHUB_REPO_FULLNAME
+        self.github_repo_branch    = GITHUB_REPO_BRANCH
         self.koji_user         = COREOS_KOJI_USER
 
         # If a keytab was specified let's use it
@@ -133,22 +217,21 @@ class Consumer(object):
 
         # Grab the raw message body and the status from that
         msg = message.body
-        branch = msg['branch']
-        repo   = msg['repo']['fullname']
-        commit = msg['end_commit']
+        branch = msg['ref']
+        repo   = msg['repository']['full_name']
+        commit = msg['head_commit']['id']
 
-        if (repo != self.git_repo_fullname):
+        if (repo != self.github_repo_fullname):
             logger.debug(f'Skipping message from unrelated repo: {repo}')
             return
 
-        if (branch != self.git_repo_branch):
+        if (branch != self.github_repo_branch):
             logger.info(f'Skipping message from unrelated branch: {branch}')
             return
 
         # Now grab data from the commit we should operate on:
-        # https://pagure.io/dusty/coreos-koji-data/raw/db5c806769a5ab35bfeb15e1ac7c727ec1275b23/f/data.json
-        # This data file is basically a list ['build1NVR', 'build2NVR', 'etc']
-        url = f'{self.git_repo_domain}/{self.git_repo_fullname}/raw/{commit}/f/data.json'
+        # XXX: should update for multi-arch
+        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.generated.x86_64.json'
         logger.info(f'Attempting to retrieve data from {url}')
         r = requests.get(url)
 
@@ -525,7 +608,7 @@ if __name__ == '__main__':
     requests.get.return_value = requests_response
 
     m = fedora_messaging.api.Message(
-            topic = 'io.pagure.prod.pagure.git.receive',
+            topic = 'org.fedoraproject.prod.github.push',
             body = EXAMPLE_MESSAGE_BODY)
     c = Consumer()
     c.__call__(m)
