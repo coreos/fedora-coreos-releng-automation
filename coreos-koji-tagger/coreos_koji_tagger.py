@@ -316,11 +316,12 @@ def parse_lockfile_data(text: str) -> list:
     # An example looks something like:
     #
     #   {
-    #     "packages" : [
-    #       [
-    #         "GeoIP-1.6.12-5.fc30.x86_64",
-    #         "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
-    #       ],
+    #     "packages": {
+    #       "GeoIP": {
+    #         "evra": "1.6.12-5.fc30.x86_64",
+    #         "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+    #       }
+    #     }
     #   }
 
     # The data is JSON (yay)
@@ -328,11 +329,8 @@ def parse_lockfile_data(text: str) -> list:
     logger.debug('Retrieved JSON data:')
     logger.debug(json.dumps(data, indent=4, sort_keys=True))
 
-    # The data structure is a list of lists where the first item
-    # in each sublist is the package name in NEVRA format. We only
-    # care about the NEVRA so just grab that and return it.
-    packages = [x[0] for x in data['packages']]
-    return packages
+    # We only care about the NEVRAs, so just accumulate those and return
+    return [f'{name}-{v["evra"]}' for name, v in data['packages'].items()]
 
 def grab_first_column(text: str) -> list:
     # The output is split by newlines (split \n) and contains an 
@@ -487,40 +485,40 @@ if __name__ == '__main__':
     requests_response = Mock()
     requests_response.text = """
 {
-  "packages" : [
-    [
-      "GeoIP-1.6.12-5.fc30.x86_64",
-      "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
-    ],
-    [
-      "GeoIP-GeoLite-data-2018.06-3.fc30.noarch",
-      "sha256:b871f757d061af1125280219dca15b5066018b6ff20c08010c5774c484f127a8"
-    ],
-    [
-      "NetworkManager-1:1.16.2-1.fc30.x86_64",
-      "sha256:4818f336e9496ba919dd8158172d57b77cb65389f4b6c0d2462fea3a29ad9fda"
-    ],
-    [
-      "NetworkManager-libnm-1:1.16.2-1.fc30.x86_64",
-      "sha256:f973761517dd7fd2dcfff0aa9578c99e509591a87d0fc316751c0f96e045cbc1"
-    ],
-    [
-      "acl-2.2.53-3.fc30.x86_64",
-      "sha256:af5d6641b71ec62d126fa71322a8451aa3de7948202633da802bccd1fd6ece45"
-    ],
-    [
-      "adcli-0.8.2-3.fc30.x86_64",
-      "sha256:ff7862e1b1fefe936f3ae614d008835e686ccdc6ec06e7cf445e8f75d73d50f0"
-    ],
-    [
-      "linux-atm-libs-2.5.1-21.fc29.x86_64",
-      "sha256:7dfd2156bd09e02a93a54eedea533b44afc41d06df28f2add364e5327b27c0f7"
-    ],
-    [
-      "afterburn-4.1.0-2.module_f30+4375+41ed41a6.x86_64",
-      "sha256:c1d3aa735ea13a8831e92a54b5c0a32b33cbfb5610cfeda8294b2163dd2f5699"
-    ]
-  ]
+  "packages": {
+    "GeoIP": {
+      "evra": "1.6.12-5.fc30.x86_64",
+      "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+    },
+    "GeoIP-GeoLite-data": {
+      "evra": "2018.06-3.fc30.noarch",
+      "digest": "sha256:b871f757d061af1125280219dca15b5066018b6ff20c08010c5774c484f127a8"
+    },
+    "NetworkManager": {
+      "evra": "1:1.16.2-1.fc30.x86_64",
+      "digest": "sha256:4818f336e9496ba919dd8158172d57b77cb65389f4b6c0d2462fea3a29ad9fda"
+    },
+    "NetworkManager-libnm": {
+      "evra": "1:1.16.2-1.fc30.x86_64",
+      "digest": "sha256:f973761517dd7fd2dcfff0aa9578c99e509591a87d0fc316751c0f96e045cbc1"
+    },
+    "acl": {
+      "evra": "2.2.53-3.fc30.x86_64",
+      "digest": "sha256:af5d6641b71ec62d126fa71322a8451aa3de7948202633da802bccd1fd6ece45"
+    },
+    "adcli": {
+      "evra": "0.8.2-3.fc30.x86_64",
+      "digest": "sha256:ff7862e1b1fefe936f3ae614d008835e686ccdc6ec06e7cf445e8f75d73d50f0"
+    },
+    "afterburn": {
+      "evra": "4.1.1-3.module_f30+4804+1c3d5e42.x86_64",
+      "digest": "sha256:71ef65a598f8b0cbeeee0b86f76d345e46ed0af8a1372d09cde99854f1998b4d"
+    },
+    "afterburn-dracut": {
+      "evra": "4.1.1-3.module_f30+4804+1c3d5e42.x86_64",
+      "digest": "sha256:a66b425d7b95c5a87f35ce5abc12c01032726e304db9e284ea859a1003437ce2"
+    }
+  }
 }
     """
     requests = Mock()
