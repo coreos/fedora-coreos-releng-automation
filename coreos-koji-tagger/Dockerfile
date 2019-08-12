@@ -4,6 +4,9 @@ FROM registry.fedoraproject.org/fedora:30
 # periods with no newline get printed immediately to the screen
 ENV PYTHONUNBUFFERED=true
 
+# Get any latest updates since last container spin
+RUN dnf update -y && dnf clean all
+
 # Install pagure/fedmsg libraries
 RUN dnf -y install dnf-plugins-core python3-libpagure fedora-messaging koji krb5-workstation && dnf clean all
 
