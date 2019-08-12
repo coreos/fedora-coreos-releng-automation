@@ -329,8 +329,8 @@ class Consumer(object):
 
     def find_principal_from_keytab(self) -> str:
         # Find the pricipal/realm that the keytab is for
-        cmd = f'/usr/bin/klist -k {self.keytab_file}'
-        cp = runcmd(cmd.split(' '), capture_output=True, check=True)
+        cmd = ['/usr/bin/klist', '-k', self.keytab_file]
+        cp = runcmd(cmd, capture_output=True, check=True)
 
         # The output is in the form:
         #
@@ -357,8 +357,8 @@ class Consumer(object):
         principal = self.find_principal_from_keytab()
         logger.info(f'Using principal {principal}')
         # then Auth
-        cmd = f'/usr/bin/kinit -k -t {self.keytab_file} {principal}'
-        runcmd(cmd.split(' '), check=True)
+        cmd = ['/usr/bin/kinit', '-k', '-t', self.keytab_file, principal]
+        runcmd(cmd, check=True)
         check_koji_connection(check=True) # Make sure it works
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
@@ -467,8 +467,8 @@ def get_buildsinfo_from_rpmnevras(rpmnevras: set) -> dict:
     # and buildroot tag name) for all rpmnvras
     #
     # Usage: koji rpminfo [options] <n-v-r.a> [<n-v-r.a> ...]
-    cmd = f'{KOJI_CMD} rpminfo'.split(' ')
-    cmd+= rpmnvras
+    cmd = [KOJI_CMD, 'rpminfo']
+    cmd.extend(rpmnvras)
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
 
     # Outputs formatting like:
@@ -523,7 +523,7 @@ def get_tagged_builds(tag: str) -> list:
     #   kernel-5.0.11-300.fc30                    coreos-pool           labbott
     # 
     # Usage: koji list-tagged [options] tag [package]
-    cmd = f'{KOJI_CMD} list-tagged {tag} --quiet'.split(' ')
+    cmd = [KOJI_CMD, 'list-tagged', tag, '--quiet']
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
@@ -531,7 +531,7 @@ def get_pkgs_in_tag(tag: str) -> list:
     if not tag:
         raise
     # Usage: koji list-pkgs [options]
-    cmd = f'{KOJI_CMD} list-pkgs --tag={tag} --quiet'.split(' ')
+    cmd = [KOJI_CMD, 'list-pkgs', f'--tag={tag}', '--quiet']
     cp = runcmd(cmd, check=True, capture_output=True, text=True)
     return grab_first_column(cp.stdout)
 
@@ -539,7 +539,7 @@ def tag_builds(tag: str, builds: list):
     if not tag or not builds:
         raise
     # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
-    cmd = f'{KOJI_CMD} tag-build {tag}'.split(' ')
+    cmd = [KOJI_CMD, 'tag-build', tag]
     cmd.extend(builds)
     runcmd(cmd, check=True)
 
@@ -547,13 +547,13 @@ def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
     if not tag or not pkgs or not owner:
         raise
     # Usage: koji add-pkg [options] tag package [package2 ...]
-    cmd = f'{KOJI_CMD} add-pkg {tag} --owner {owner}'.split(' ')
+    cmd = [KOJI_CMD, 'add-pkg', tag, '--owner', owner]
     cmd.extend(pkgs)
     runcmd(cmd, check=True)
 
 def check_koji_connection(check: bool = False) -> subprocess.CompletedProcess:
     # Usage: koji moshimoshi [options]
-    cmd = f'{KOJI_CMD} moshimoshi'.split(' ')
+    cmd = [KOJI_CMD, 'moshimoshi']
     cp = runcmd(cmd, check=check, capture_output=True)
     return cp
 
