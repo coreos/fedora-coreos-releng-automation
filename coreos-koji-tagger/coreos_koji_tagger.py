@@ -204,7 +204,8 @@ class Consumer(object):
             if os.path.exists(self.keytab_file):
                 self.kinit()
             else:
-                raise
+                raise Exception("The specified keytab file "
+                                "does not exist: %s" % self.keytab_file)
         else:
             logger.info('No keytab file defined in '
                         '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
