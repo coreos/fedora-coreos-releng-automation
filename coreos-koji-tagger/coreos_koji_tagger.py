@@ -212,8 +212,8 @@ class Consumer(object):
             logger.info('Will not attempt koji write operations')
 
     def __call__(self, message: fedora_messaging.api.Message):
-        logger.debug(message.topic)
-        logger.debug(message.body)
+        #logger.debug(message.topic)
+        #logger.debug(message.body)
 
         # Re-attempt to kinit if our authentication has timed out
         if self.keytab_file:
