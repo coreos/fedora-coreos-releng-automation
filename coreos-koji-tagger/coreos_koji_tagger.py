@@ -30,7 +30,7 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 
 # if we are in a stage environment then use the
 # stage koji as well as the staging kerberos
-if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
+if os.getenv('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
 else:
     KOJI_CMD = '/usr/bin/koji'
@@ -195,7 +195,7 @@ class Consumer(object):
         self.koji_user         = COREOS_KOJI_USER
 
         # If a keytab was specified let's use it
-        self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
+        self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
         if self.keytab_file:
             if os.path.exists(self.keytab_file):
                 self.kinit()
