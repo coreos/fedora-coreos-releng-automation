@@ -30,7 +30,7 @@ KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 
 # if we are in a stage environment then use the
 # stage koji as well as the staging kerberos
-if os.environ.get('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
+if os.getenv('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
     KOJI_CMD = '/usr/bin/stg-koji'
 else:
     KOJI_CMD = '/usr/bin/koji'
@@ -41,8 +41,8 @@ else:
 COREOS_KOJI_USER = 'coreosbot'
 
 # XXX: should be in config file
-GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
-GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
+DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
+DEFAULT_GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
 
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
@@ -190,12 +190,16 @@ class Consumer(object):
     def __init__(self):
         self.target_tag        = KOJI_TARGET_TAG
         self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
-        self.github_repo_fullname  = GITHUB_REPO_FULLNAME
-        self.github_repo_branch    = GITHUB_REPO_BRANCH
+        self.github_repo_fullname = os.getenv(
+                                        'GITHUB_REPO_FULLNAME',
+                                        DEFAULT_GITHUB_REPO_FULLNAME)
+        self.github_repo_branch   = os.getenv(
+                                        'GITHUB_REPO_BRANCH',
+                                        DEFAULT_GITHUB_REPO_BRANCH)
         self.koji_user         = COREOS_KOJI_USER
 
         # If a keytab was specified let's use it
-        self.keytab_file = os.environ.get('COREOS_KOJI_TAGGER_KEYTAB_FILE')
+        self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
         if self.keytab_file:
             if os.path.exists(self.keytab_file):
                 self.kinit()
