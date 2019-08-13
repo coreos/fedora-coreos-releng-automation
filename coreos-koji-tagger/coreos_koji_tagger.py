@@ -2,18 +2,12 @@
 import fedora_messaging.api
 import os
 import re
-import requests
+import koji
 import logging
 import json
-
-import dnf.subject
-import hawkey
-
-import sys
-import subprocess
 import requests
 
-# Set local logging 
+# Set local logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -28,12 +22,18 @@ logger.setLevel(logging.DEBUG)
 KOJI_TARGET_TAG = 'coreos-pool'
 KOJI_INTERMEDIATE_TAG = 'f{releasever}-coreos-signing-pending'
 
-# if we are in a stage environment then use the
-# stage koji as well as the staging kerberos
-if os.getenv('COREOS_KOJI_TAGGER_USE_STG', 'false') == 'true':
-    KOJI_CMD = '/usr/bin/stg-koji'
-else:
-    KOJI_CMD = '/usr/bin/koji'
+# TODO: Move to config
+KOJI_CONFIG = {
+    'server_url': 'https://koji.fedoraproject.org/kojihub',
+    'options': {
+        'krb_rdns': False,
+    },
+    'authmethod': 'kerberos',
+    'principal': 'me@FEDORAPROJECT.ORG',
+    'keytab': os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE'),
+}
+if os.getenv('COREOS_KOJI_TAGGER_USE_STG') == 'true':
+    KOJI_CONFIG['server_url'] = 'https://koji.stg.fedoraproject.org/kojihub'
 
 # This user will be the owner of a pkg in a tag
 # To view existing owners run:
@@ -43,6 +43,180 @@ COREOS_KOJI_USER = 'coreosbot'
 # XXX: should be in config file
 DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
 DEFAULT_GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
+
+
+# Given a repo (and thus an input JSON) analyze existing koji tag set
+# and tag in any missing packages
+
+class Consumer(object):
+    def __init__(self):
+        self._koji_client = None
+        self._target_tag_id = None
+        self.target_tag        = KOJI_TARGET_TAG
+        self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
+        self.github_repo_fullname = os.getenv(
+                                        'GITHUB_REPO_FULLNAME',
+                                        DEFAULT_GITHUB_REPO_FULLNAME)
+        self.github_repo_branch   = os.getenv(
+                                        'GITHUB_REPO_BRANCH',
+                                        DEFAULT_GITHUB_REPO_BRANCH)
+
+    @property
+    def target_tag_id(self):
+        if self._target_tag_id is None:
+            taginfo = self.koji_client.getTag(tag)
+            self._target_tag_id = taginfo['id']
+        return self._target_tag_id
+
+    @property
+    def koji_client(self):
+        if self._koji_client is not None:
+            return self._koji_client
+
+        clt = koji.ClientSession(
+            KOJI_CONFIG['serverurl'],
+            KOJI_CONFIG['options'],
+        )
+
+        if KOJI_CONFIG['authmethod'] == 'kerberos':
+            kwargs = {}
+            for opt in ('principal', 'keytab', 'ccache'):
+                if opt in KOJI_CONFIG:
+                    kwargs[opt] = instance_info['options'][opt]
+            clt.krb_login(**kwargs)
+        else:
+            raise ValueError("Unsupported authmethod")
+
+        self._koji_client = clt
+
+        return clt
+
+    def __call__(self, message: fedora_messaging.api.Message):
+        logger.debug(message.topic)
+        logger.debug(message.body)
+
+        # Grab the raw message body and the status from that
+        msg = message.body
+        branch = msg['ref']
+        repo   = msg['repository']['full_name']
+        commit = msg['head_commit']['id']
+
+        if (repo != self.github_repo_fullname):
+            logger.debug(f'Skipping message from unrelated repo: {repo}')
+            return
+
+        if (branch != self.github_repo_branch):
+            logger.info(f'Skipping message from unrelated branch: {branch}')
+            return
+
+        # Now grab data from the commit we should operate on:
+        # XXX: should update for multi-arch
+        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.generated.x86_64.json'
+        logger.info(f'Attempting to retrieve data from {url}')
+        r = requests.get(url)
+
+        # NOMENCLATURE:
+        #
+        # In koji there is the concept of a pkg and a build. A pkg
+        # is a piece of software (i.e. kernel) whereas a build is a
+        # specific build of that software that is unique by NVR (i.e.
+        # kernel-5.0.17-300.fc30). RPMs are output of a build. There
+        # can be many rpms (including subpackages) output from a build
+        # (for example kernel-5.0.17-300.fc30.x86_64.rpm and
+        # kernel-devel-5.0.17-300.fc30.x86_64.rpm). So we have:
+        #
+        # kernel                              --> koji pkg
+        # kernel-5.0.17-300.fc30              --> koji build (matches srpm name)
+        # kernel-5.0.17-300.fc30.x86_64       --> main rpm package
+        # kernel-devel-5.0.17-300.fc30.x86_64 --> rpm subpackage
+        #
+        # STRATEGY:
+        #
+        # The lockfile input gives a list of rpm names in NEVRA format. We
+        # must determine the srpm name (koji build name) from that and compare
+        # that with existing koji builds in the tag. Once we have a list of
+        # koji builds that aren't in the tag we can add the koji pkg to the
+        # tag (if needed) and then tag the koji build into the tag.
+
+        # parse the lockfile and get a set of rpm NEVRAs
+        desiredrpms = set(parse_lockfile_data(r.json()))
+
+        # convert the rpm NEVRAs into a list of build IDs
+        desiredbuilds = self.get_builds_from_rpmnevras(desiredrpms)
+
+        # Grab the currently tagged builds
+        tagbuilds = self.get_tagged_builds(self.target_tag)
+
+        # Get the list of pkgs needed
+        desiredpkgs = self.get_pkgs_from_buildids(desiredbuilds)
+
+        # Grab the list of pkgs that can be tagged into the tag
+        tagpkgs = self.get_pkglist(self.target_tag)
+
+        # Make sure all packages desired are in the pkglist
+        with self.koji_client.multicall(strict=True) as m:
+            for newpkg in (desiredpkgs - tagpkgs):
+                m.packageListAdd(self.target_tag, newpkg,
+                                 owner=COREOS_KOJI_USER)
+
+        # Now perform tagging and untagging
+        with self.koji_client.multicall(strict=True) as m:
+            for buildid in (desiredbuilds - tagbuilds):
+                m.tagBuild(self.intermediate_tag, buildid)
+
+            for buildid in (tagbuilds - desiredbuilds):
+                m.untagBuild(self.target_tag, buildid)
+
+        # And all done
+
+    def get_builds_from_rpmnevras(self, rpmnevras: set) -> set:
+        # Given a list of rpm NEVRAs get the list of koji build IDs
+        if not rpmnevras:
+            raise ValueError("No nevras to get_buildsinfo")
+
+        with self.koji_client.multicall(strict=True) as m:
+            rpminfos = [m.getRPM(nevra, strict=True) for nevra in rpmnevras]
+        return set([ri.result['build_id'] for ri in rpminfos])
+
+    def get_pkgs_from_buildids(self, buildids: set) -> set:
+        with self.koji_client.multicall(strict=True) as m:
+            builds = [m.getBuild(bid) for bid in buildids]
+        return set([build.result['package_name'] for build in builds])
+
+    def get_pkglist(self, tag) -> set:
+        # Giiven a tag, return the packages in its pkglist
+        pkgs = self.koji_client.listPackages(tagID=self.target_tag_id)
+        return set([pkg['package_name'] for pkg in pkgs])
+
+    def get_tagged_builds(self, tag) -> set:
+        # Given a tag, return the build IDs tagged into it
+        builds = self.koji_client.listTagged(tag=tag)
+        return set([build['build_id'] for build in builds])
+
+def parse_lockfile_data(data: dict) -> list:
+    # Parse the rpm lockfile format and return a list of rpms in
+    # NEVRA form.
+    # Best documention on the format for now:
+    #     https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
+    #
+    # An example looks something like:
+    #
+    #   {
+    #     "packages": {
+    #       "GeoIP": {
+    #         "evra": "1.6.12-5.fc30.x86_64",
+    #         "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+    #       }
+    #     }
+    #   }
+
+    # The data is JSON (yay)
+    logger.debug('Retrieved JSON data:')
+    logger.debug(json.dumps(data, indent=4, sort_keys=True))
+
+    # We only care about the NEVRAs, so just accumulate those and return
+    return [f'{name}-{v["evra"]}' for name, v in data['packages'].items()]
+
 
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
@@ -181,381 +355,6 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
 }
 """
 )
-
-
-# Given a repo (and thus an input JSON) analyze existing koji tag set
-# and tag in any missing packages
-
-class Consumer(object):
-    def __init__(self):
-        self.target_tag        = KOJI_TARGET_TAG
-        self.intermediate_tag  = KOJI_INTERMEDIATE_TAG
-        self.github_repo_fullname = os.getenv(
-                                        'GITHUB_REPO_FULLNAME',
-                                        DEFAULT_GITHUB_REPO_FULLNAME)
-        self.github_repo_branch   = os.getenv(
-                                        'GITHUB_REPO_BRANCH',
-                                        DEFAULT_GITHUB_REPO_BRANCH)
-        self.koji_user         = COREOS_KOJI_USER
-
-        # If a keytab was specified let's use it
-        self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
-        if self.keytab_file:
-            if os.path.exists(self.keytab_file):
-                self.kinit()
-            else:
-                raise Exception("The specified keytab file "
-                                "does not exist: %s" % self.keytab_file)
-        else:
-            logger.info('No keytab file defined in '
-                        '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
-            logger.info('Will not attempt koji write operations')
-
-    def __call__(self, message: fedora_messaging.api.Message):
-        #logger.debug(message.topic)
-        #logger.debug(message.body)
-
-        # Re-attempt to kinit if our authentication has timed out
-        if self.keytab_file:
-            if check_koji_connection().returncode != 0:
-                self.kinit()
-
-        # Grab the raw message body and the status from that
-        msg = message.body
-        branch = msg['ref']
-        repo   = msg['repository']['full_name']
-        commit = msg['head_commit']['id']
-
-        if (repo != self.github_repo_fullname):
-            logger.debug(f'Skipping message from unrelated repo: {repo}')
-            return
-
-        if (branch != self.github_repo_branch):
-            logger.info(f'Skipping message from unrelated branch: {branch}')
-            return
-
-        # Now grab data from the commit we should operate on:
-        # XXX: should update for multi-arch
-        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.generated.x86_64.json'
-        logger.info(f'Attempting to retrieve data from {url}')
-        r = requests.get(url)
-
-
-        # NOMENCLATURE:
-        # 
-        # In koji there is the concept of a pkg and a build. A pkg
-        # is a piece of software (i.e. kernel) whereas a build is a
-        # specific build of that software that is unique by NVR (i.e.
-        # kernel-5.0.17-300.fc30). RPMs are output of a build. There
-        # can be many rpms (including subpackages) output from a build
-        # (for example kernel-5.0.17-300.fc30.x86_64.rpm and
-        # kernel-devel-5.0.17-300.fc30.x86_64.rpm). So we have:
-        #
-        # kernel                              --> koji pkg
-        # kernel-5.0.17-300.fc30              --> koji build (matches srpm name)
-        # kernel-5.0.17-300.fc30.x86_64       --> main rpm package
-        # kernel-devel-5.0.17-300.fc30.x86_64 --> rpm subpackage
-        #
-        # STRATEGY:
-        # 
-        # The lockfile input gives a list of rpm names in NEVRA format. We 
-        # must derive the srpm name (koji build name) from that and compare
-        # that with existing koji builds in the tag. Once we have a list of
-        # koji builds that aren't in the tag we can add the koji pkg to the
-        # tag (if needed) and then tag the koji build into the tag.
-
-        # parse the lockfile and get a set of rpm NEVRAs
-        desiredrpms = set(parse_lockfile_data(r.text))
-
-        # convert the rpm NEVRAs into a list of srpm NVRA (format of koji
-        # build name)
-        buildsinfo = get_buildsinfo_from_rpmnevras(desiredrpms)
-        desiredbuilds = set(buildsinfo.keys())
-
-        # Grab the list of pkgs that can be tagged into the tag
-        pkgsintag = get_pkgs_in_tag(self.target_tag)
-
-        # Grab the currently tagged builds and convert it into a set
-        currentbuilds = set(get_tagged_builds(self.target_tag))
-
-        # Find out the difference between the current set of builds
-        # that exist in the koji tag and the desired set of builds to
-        # be added to the koji tag.
-        buildstotag = list(desiredbuilds.difference(currentbuilds))
-
-
-        # compute the package names of each build and determine whether
-        # it is in the tag or not. If not we'll need to add the package
-        # to the tag before we can add the specific build to the tag
-        pkgstoadd = []
-        for build in buildstotag:
-
-            # Find the some defining information for this build.
-            buildinfo = get_rich_info_for_rpm_string(build, arch=False)
-
-            # Check to see if the koji pkg is already covered by the tag
-            if buildinfo.name not in pkgsintag:
-                pkgstoadd.append(buildinfo.name)
-
-        # Log if there is nothing to do
-        if not pkgstoadd and not buildstotag:
-            logger.info(f'No new builds to tag.. going back to sleep')
-            return
-
-        # Add the needed packages to the tag if we have credentials
-        if pkgstoadd:
-            logger.info('Adding packages to the '
-                        f'{self.target_tag} tag: {pkgstoadd}')
-            if self.keytab_file:
-                add_pkgs_to_tag(tag=self.target_tag,
-                                pkgs=pkgstoadd,
-                                owner=self.koji_user)
-                logger.info('Package adding done')
-
-        # Perform the tagging for each release into the intermediate
-        # tag for that release if we have credentials
-        if buildstotag:
-            releasevers = set(buildsinfo.values())
-            for releasever in releasevers:
-                tag = self.intermediate_tag.format(releasever=releasever)
-                buildstotagforthisrelease = \
-                    [x for x in buildstotag if buildsinfo[x] == releasever]
-                if buildstotagforthisrelease:
-                    logger.info('Tagging builds into the '
-                                f'{tag} tag: {buildstotagforthisrelease}')
-                    if self.keytab_file:
-                        tag_builds(tag=tag, builds=buildstotagforthisrelease)
-            logger.info('Tagging done')
-
-    def find_principal_from_keytab(self) -> str:
-        # Find the pricipal/realm that the keytab is for
-        cmd = ['/usr/bin/klist', '-k', self.keytab_file]
-        cp = runcmd(cmd, capture_output=True, check=True)
-
-        # The output is in the form:
-        #
-        # # klist -k coreosbot.keytab
-        # Keytab name: FILE:coreosbot.keytab
-        # KVNO Principal
-        # ---- --------------------------------------------------------------------------
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #
-        # Grab the last line and use that.
-        line = cp.stdout.decode('utf-8').rstrip().splitlines()[-1]
-
-        # The principal will be the last column in that line
-        principal = line.split(' ')[-1]
-        logger.debug(f'Found principal {principal} in keytab')
-        return principal
-
-    def kinit(self):
-        logger.info(f'Authenticating with keytab: {self.keytab_file}')
-        # find principal first
-        principal = self.find_principal_from_keytab()
-        logger.info(f'Using principal {principal}')
-        # then Auth
-        cmd = ['/usr/bin/kinit', '-k', '-t', self.keytab_file, principal]
-        runcmd(cmd, check=True)
-        check_koji_connection(check=True) # Make sure it works
-
-def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
-    try:
-        logger.debug(f'Running command: {cmd}')
-        cp = subprocess.run(cmd, **kwargs)
-    except subprocess.CalledProcessError as e:
-        logger.error('Running command returned bad exitcode')
-        logger.error(f'COMMAND: {cmd}')
-        logger.error(f' STDOUT: {e.stdout}')
-        logger.error(f' STDERR: {e.stderr}')
-        raise
-    return cp # subprocess.CompletedProcess
-
-def get_rich_info_for_rpm_string(string: str, arch: bool) -> hawkey.NEVRA:
-    # arch: (bool) whether arch is included in the string
-    if arch:
-        form=hawkey.FORM_NEVRA
-    else:
-        form=hawkey.FORM_NEVR
-
-    # get a hawkey.Subject object for the string
-    subject = dnf.subject.Subject(string) # returns hawkey.Subject
-
-    # get a list of hawkey.NEVRA objects that are the possibilities
-    nevras  = subject.get_nevra_possibilities(forms=form)
-
-    # return the first hawkey.NEVRA item in the list of possibilities
-    info = nevras[0]
-    #   print(info.name)
-    #   print(info.version)
-    #   print(info.epoch)
-    #   print(info.release)
-    #   print(info.arch)
-    return info
-
-def parse_lockfile_data(text: str) -> list:
-    # Parse the rpm lockfile format and return a list of rpms in
-    # NEVRA form.
-    # Best documention on the format for now:
-    #     https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
-    #
-    # An example looks something like:
-    #
-    #   {
-    #     "packages": {
-    #       "GeoIP": {
-    #         "evra": "1.6.12-5.fc30.x86_64",
-    #         "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
-    #       }
-    #     }
-    #   }
-
-    # The data is JSON (yay)
-    data = json.loads(text)
-    logger.debug('Retrieved JSON data:')
-    logger.debug(json.dumps(data, indent=4, sort_keys=True))
-
-    # We only care about the NEVRAs, so just accumulate those and return
-    return [f'{name}-{v["evra"]}' for name, v in data['packages'].items()]
-
-def grab_first_column(text: str) -> list:
-    # The output is split by newlines (split \n) and contains an 
-    # extra newline  at the end (rstrip). We only care about the 1st
-    # column (split(' ')[0]) so just grab that and return a list.
-    lines = text.rstrip().split('\n')
-    return [b.split(' ')[0] for b in lines]
-
-def get_releasever_from_buildroottag(buildroottag: str) -> str:
-    logger.debug(f'Checking buildroottag {buildroottag}')
-    if 'afterburn' in buildroottag:
-        # example: module-afterburn-rolling-3020190524194016-2c789dff-build
-        releasever = re.search('module-afterburn-rolling-(\d\d)',
-                                                buildroottag).group(1)
-    elif 'zincati' in buildroottag:
-        # example: module-zincati-rolling-3020190711144249-a23e773d-build
-        releasever = re.search('module-zincati-rolling-(\d\d)',
-                                                buildroottag).group(1)
-    elif 'fedora-coreos-pinger' in buildroottag:
-        # example: module-fedora-coreos-pinger-rolling-3020190720131029-a23e773d-build
-        releasever = re.search('module-fedora-coreos-pinger-rolling-(\d\d)',
-                                                buildroottag).group(1)
-    else:
-        # example: f30-build
-        releasever = re.search('f(\d\d)', buildroottag).group(1)
-    if not releasever:
-        raise
-    return releasever
-
-def get_buildsinfo_from_rpmnevras(rpmnevras: set) -> dict:
-    # Given a list of rpm NEVRAs get the list of srpms (and
-    # thus koji build names) from it
-    if not rpmnevras:
-        raise
-
-    # Get a set of NVRAs from the list of NEVRAs
-    rpmnvras = set()
-    for rpmnevra in rpmnevras:
-        # Find the some defining information for this rpm.
-        rpminfo = get_rich_info_for_rpm_string(rpmnevra, arch=True)
-        # come up with rpm NVRA
-        rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
-        rpmnvras.add(rpmnvra)
-
-    # Query koji in a single query to get rpminfo (includes SRPM name
-    # and buildroot tag name) for all rpmnvras
-    #
-    # Usage: koji rpminfo [options] <n-v-r.a> [<n-v-r.a> ...]
-    cmd = [KOJI_CMD, 'rpminfo']
-    cmd.extend(rpmnvras)
-    cp = runcmd(cmd, check=True, capture_output=True, text=True)
-
-    # Outputs formatting like:
-    #  - `SRPM: E:N-V-R`
-    #  - `Buildroot: 16295881 (tag f30-build, arch x86_64, repo 1166504)
-    #
-    # $ koji rpminfo grub2-efi-x64-2.02-81.fc30.x86_64
-    #   RPM: 1:grub2-efi-x64-2.02-81.fc30.x86_64 [17584661]
-    #   RPM Path: /mnt/koji/packages/grub2/2.02/81.fc30/x86_64/grub2-efi-x64-2.02-81.fc30.x86_64.rpm
-    #   SRPM: 1:grub2-2.02-81.fc30 [1269330]
-    #   SRPM Path: /mnt/koji/packages/grub2/2.02/81.fc30/src/grub2-2.02-81.fc30.src.rpm
-    #   Built: Mon, 20 May 2019 13:19:34 EDT
-    #   SIGMD5: bbfb797611097256c119f99c4480e5a8
-    #   Size: 365984
-    #   License: GPLv3+
-    #   Build ID: 1269330
-    #   Buildroot: 16295881 (tag f30-build, arch x86_64, repo 1166504)
-    #   Build Host: bkernel03.phx2.fedoraproject.org
-    #   Build Task: 34957405
-
-    # Go through each line and get the srpm names
-    srpm = None
-    buildroottag = None
-    buildsinfo = dict()
-    for line in cp.stdout.strip().splitlines():
-        if 'SRPM:' in line:
-            # The (\d+:)? pulls the epoch off the front of each SRPM value
-            # if it exists.
-            srpm = re.search('SRPM: (\d+:)?([\S]+)', line).group(2)
-        if 'Buildroot:' in line:
-            buildroottag = re.search('Buildroot: [\d]+ \(tag ([\S]+),', line).group(1)
-            releasever = get_releasever_from_buildroottag(buildroottag)
-            # Now that we have both pieces of info we add to the dict
-            buildsinfo.update({srpm: releasever})
-            srpm = None
-            buildroottag = None
-
-    logger.debug("Found Builds: {}".format(buildsinfo.keys()))
-    logger.debug(buildsinfo)
-    return buildsinfo
-
-def get_tagged_builds(tag: str) -> list:
-    if not tag:
-        raise
-
-    # Grab current builds in the koji tag
-    # The output with `--quiet` is like this:
-    # 
-    #   coreos-installer-0-5.gitd3fc540.fc30      coreos-pool           dustymabe
-    #   ignition-2.0.0-beta.3.git910e6c6.fc30     coreos-pool           jlebon
-    #   kernel-5.0.10-300.fc30                    coreos-pool           labbott
-    #   kernel-5.0.11-300.fc30                    coreos-pool           labbott
-    # 
-    # Usage: koji list-tagged [options] tag [package]
-    cmd = [KOJI_CMD, 'list-tagged', tag, '--quiet']
-    cp = runcmd(cmd, check=True, capture_output=True, text=True)
-    return grab_first_column(cp.stdout)
-
-def get_pkgs_in_tag(tag: str) -> list:
-    if not tag:
-        raise
-    # Usage: koji list-pkgs [options]
-    cmd = [KOJI_CMD, 'list-pkgs', f'--tag={tag}', '--quiet']
-    cp = runcmd(cmd, check=True, capture_output=True, text=True)
-    return grab_first_column(cp.stdout)
-
-def tag_builds(tag: str, builds: list):
-    if not tag or not builds:
-        raise
-    # Usage: koji tag-build [options] <tag> <pkg> [<pkg>...]
-    cmd = [KOJI_CMD, 'tag-build', tag]
-    cmd.extend(builds)
-    runcmd(cmd, check=True)
-
-def add_pkgs_to_tag(tag: str, pkgs: list, owner: str):
-    if not tag or not pkgs or not owner:
-        raise
-    # Usage: koji add-pkg [options] tag package [package2 ...]
-    cmd = [KOJI_CMD, 'add-pkg', tag, '--owner', owner]
-    cmd.extend(pkgs)
-    runcmd(cmd, check=True)
-
-def check_koji_connection(check: bool = False) -> subprocess.CompletedProcess:
-    # Usage: koji moshimoshi [options]
-    cmd = [KOJI_CMD, 'moshimoshi']
-    cp = runcmd(cmd, check=check, capture_output=True)
-    return cp
 
 # The code in this file is expected to be run through fedora messaging
 # However, you can run the script directly for testing purposes. The
