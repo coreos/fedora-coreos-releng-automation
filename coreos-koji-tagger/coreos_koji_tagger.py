@@ -233,7 +233,7 @@ class Consumer(object):
             if not os.path.exists(self.keytab_file):
                 raise Exception("The specified keytab file "
                                 "does not exist: %s" % self.keytab_file)
-            principal = self.find_principal_from_keytab()
+            principal = find_principal_from_keytab(self.keytab_file)
             self.koji_client.gssapi_login(principal, self.keytab_file)
         else:
             logger.info('No keytab file defined in '
@@ -393,29 +393,29 @@ class Consumer(object):
         builds = self.koji_client.listTagged(tag=tag)
         return set([build['build_id'] for build in builds])
 
-    def find_principal_from_keytab(self) -> str:
-        # Find the pricipal/realm that the keytab is for
-        cmd = ['/usr/bin/klist', '-k', self.keytab_file]
-        cp = runcmd(cmd, capture_output=True, check=True)
+def find_principal_from_keytab(keytab: str) -> str:
+    # Find the pricipal/realm that the keytab is for
+    cmd = ['/usr/bin/klist', '-k', keytab]
+    cp = runcmd(cmd, capture_output=True, check=True)
 
-        # The output is in the form:
-        #
-        # # klist -k coreosbot.keytab
-        # Keytab name: FILE:coreosbot.keytab
-        # KVNO Principal
-        # ---- --------------------------------------------------------------------------
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #    3 coreosbot@FEDORAPROJECT.ORG
-        #
-        # Grab the last line and use that.
-        line = cp.stdout.decode('utf-8').rstrip().splitlines()[-1]
+    # The output is in the form:
+    #
+    # # klist -k coreosbot.keytab
+    # Keytab name: FILE:coreosbot.keytab
+    # KVNO Principal
+    # ---- --------------------------------------------------------------------------
+    #    3 coreosbot@FEDORAPROJECT.ORG
+    #    3 coreosbot@FEDORAPROJECT.ORG
+    #    3 coreosbot@FEDORAPROJECT.ORG
+    #    3 coreosbot@FEDORAPROJECT.ORG
+    #
+    # Grab the last line and use that.
+    line = cp.stdout.decode('utf-8').rstrip().splitlines()[-1]
 
-        # The principal will be the last column in that line
-        principal = line.split(' ')[-1]
-        logger.debug(f'Found principal {principal} in keytab')
-        return principal
+    # The principal will be the last column in that line
+    principal = line.split(' ')[-1]
+    logger.debug(f'Found principal {principal} in keytab')
+    return principal
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     try:
