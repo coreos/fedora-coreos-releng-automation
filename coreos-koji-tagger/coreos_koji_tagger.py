@@ -16,7 +16,7 @@ import requests
 
 # Set local logging 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # The target and the intermediate tag. The target tag is where we want
 # builds to end up. We'll check the target tag to see if builds are already
@@ -241,8 +241,8 @@ class Consumer(object):
             logger.info('Will not attempt koji write operations')
 
     def __call__(self, message: fedora_messaging.api.Message):
-        #logger.debug(message.topic)
-        #logger.debug(message.body)
+        logger.debug(message.topic)
+        logger.debug(message.body)
 
         # Grab the raw message body and the status from that
         msg = message.body
@@ -251,7 +251,7 @@ class Consumer(object):
         commit = msg['head_commit']['id']
 
         if (repo != self.github_repo_fullname):
-            logger.debug(f'Skipping message from unrelated repo: {repo}')
+            logger.info(f'Skipping message from unrelated repo: {repo}')
             return
 
         if (branch != self.github_repo_branch):
@@ -414,12 +414,12 @@ def find_principal_from_keytab(keytab: str) -> str:
 
     # The principal will be the last column in that line
     principal = line.split(' ')[-1]
-    logger.debug(f'Found principal {principal} in keytab')
+    logger.info(f'Found principal {principal} in keytab')
     return principal
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     try:
-        logger.debug(f'Running command: {cmd}')
+        logger.info(f'Running command: {cmd}')
         cp = subprocess.run(cmd, **kwargs)
     except subprocess.CalledProcessError as e:
         logger.error('Running command returned bad exitcode')
