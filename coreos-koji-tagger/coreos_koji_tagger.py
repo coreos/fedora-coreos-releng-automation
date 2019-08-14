@@ -6,6 +6,7 @@ import requests
 import logging
 import json
 import koji
+from koji_cli.lib import watch_tasks
 
 import dnf.subject
 import hawkey
@@ -336,8 +337,11 @@ class Consumer(object):
                                             '\n\t'.join(map(str, tuples)))
             if self.keytab_file:
                 with self.koji_client.multicall(strict=True) as m:
-                    for (tag, nvr) in tuples:
-                        m.tagBuild(tag=tag, build=nvr)
+                    tasks = [m.tagBuild(tag=tag, build=nvr)
+                                    for (tag, nvr) in tuples]
+                watch_tasks(self.koji_client,
+                            [task.result for task in tasks],
+                            poll_interval=10)
                 logger.info('Tagging done')
 
 
