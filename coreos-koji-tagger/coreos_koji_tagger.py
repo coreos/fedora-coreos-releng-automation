@@ -359,7 +359,9 @@ class Consumer(object):
 
 
     def get_buildsinfo_from_rpmnevras(self, rpmnevras: set) -> dict:
-        # Given a set of rpm NEVRAs get a set of corresponding koji buildids
+        """
+        Given a set of rpm NEVRAs get a set of corresponding koji buildids
+        """
         if not rpmnevras:
             raise ValueError("No nevras to get_builds_from_rpmnevras")
 
@@ -401,17 +403,23 @@ class Consumer(object):
         return buildsinfo
 
     def get_pkglist_in_tag(self, tag: str) -> set:
-        # Given a tag, return the set of packages in its pkglist
+        """
+        Given a tag, return the set of packages in its pkglist
+        """
         pkgs = self.koji_client.listPackages(tagID=tag)
         return set([pkg['package_name'] for pkg in pkgs])
 
     def get_tagged_buildids(self, tag: str) -> set:
-        # Given a tag, return the buildids tagged into it
+        """
+        Given a tag, return the buildids tagged into it
+        """
         builds = self.koji_client.listTagged(tag=tag)
         return set([build['build_id'] for build in builds])
 
 def find_principal_from_keytab(keytab: str) -> str:
-    # Find the pricipal/realm that the keytab is for
+    """
+    Find the pricipal/realm that the keytab is for
+    """
     cmd = ['/usr/bin/klist', '-k', keytab]
     cp = runcmd(cmd, capture_output=True, check=True)
 
@@ -466,21 +474,23 @@ def get_NVRA_from_NEVRA(string: str) -> str:
     return nvra
 
 def parse_lockfile_data(text: str) -> list:
-    # Parse the rpm lockfile format and return a list of rpms in
-    # NEVRA form.
-    # Best documention on the format for now:
-    #     https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
-    #
-    # An example looks something like:
-    #
-    #   {
-    #     "packages": {
-    #       "GeoIP": {
-    #         "evra": "1.6.12-5.fc30.x86_64",
-    #         "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
-    #       }
-    #     }
-    #   }
+    """
+    Parse the rpm lockfile format and return a list of rpms in
+    NEVRA form.
+    Best documention on the format for now:
+        https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
+    
+    An example looks something like:
+    
+      {
+        "packages": {
+          "GeoIP": {
+            "evra": "1.6.12-5.fc30.x86_64",
+            "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+          }
+        }
+      }
+    """
 
     # The data is JSON (yay)
     data = json.loads(text)
