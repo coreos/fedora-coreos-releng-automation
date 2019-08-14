@@ -430,7 +430,7 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
         logger.error(f'COMMAND: {cmd}')
         logger.error(f' STDOUT: {e.stdout}')
         logger.error(f' STDERR: {e.stderr}')
-        raise
+        raise e
     return cp # subprocess.CompletedProcess
 
 def get_NVRA_from_NEVRA(string: str) -> str:
@@ -495,7 +495,8 @@ def get_releasever_from_buildroottag(buildroottag: str) -> str:
         # example: f30-build
         releasever = re.search('f(\d\d)', buildroottag).group(1)
     if not releasever:
-        raise
+        raise Exception('Could not derive a releasever for the given'
+                       f'buildroot tag: {buildroottag}')
     return releasever
 
 # The code in this file is expected to be run through fedora messaging
