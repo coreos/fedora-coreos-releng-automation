@@ -7,6 +7,7 @@ import logging
 import json
 import koji
 from koji_cli.lib import watch_tasks
+import traceback
 
 import dnf.subject
 import hawkey
@@ -242,6 +243,20 @@ class Consumer(object):
             logger.info('Will not attempt koji write operations')
 
     def __call__(self, message: fedora_messaging.api.Message):
+        # Catch any exceptions and don't raise them further because
+        # it will cause /usr/bin/fedora-messaging to crash and we'll
+        # lose the traceback logs from the container
+        try:
+            self.process(message)
+        except Exception as e:
+            logger.error('Caught Exception!')
+            logger.error('###################################')
+            traceback.print_exc()
+            logger.error('###################################')
+            logger.error('\t continuing...')
+            pass
+
+    def process(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
         logger.debug(message.body)
 
