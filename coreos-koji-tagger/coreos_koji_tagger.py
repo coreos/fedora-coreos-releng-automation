@@ -1,20 +1,18 @@
 #!/usr/bin/python3
+import dnf.subject
 import fedora_messaging.api
+import hawkey
+import json
+import koji
+import logging
 import os
 import re
 import requests
-import logging
-import json
-import koji
-from koji_cli.lib import watch_tasks
+import subprocess
+import sys
 import traceback
 
-import dnf.subject
-import hawkey
-
-import sys
-import subprocess
-import requests
+from koji_cli.lib import watch_tasks
 
 # Set local logging 
 logger = logging.getLogger(__name__)
