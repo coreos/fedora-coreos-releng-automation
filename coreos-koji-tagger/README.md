@@ -21,6 +21,38 @@ executing:
 [batcave01]$ sudo rbac-playbook openshift-apps/coreos-koji-tagger.yml
 ```
 
+The Application will then be running in Fedora OpenShift instances:
+
+- [PROD](https://os.fedoraproject.org/console/project/coreos-koji-tagger/)
+- [STAGE](https://os.stg.fedoraproject.org/console/project/coreos-koji-tagger/)
+
+If you have appropriate permissions you'll be able to view them in the
+OpenShift web interface.
+
+# Testing in Fedora Stage
+
+In order to test in Fedora Stage you must change the manifest file(s)
+in the branch of the repo currently being monitored by stage. You can
+see the branch/repo info in 
+[the buildconfig](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml).
+
+You'll need to either push to the target branch/repo or you'll need to
+update the buildconfig to point to another one that you control. The
+repo will need to be set up publish events to fedmsg using
+[github2fedmsg](https://apps.fedoraproject.org/github2fedmsg) so that
+the script can pick up the event and process it.
+
+The manifest file(s) will need to be updated to contain information
+about RPMs that are available in the staging koji. I just browsed
+through the
+[lists of builds in the koji web UI](https://koji.stg.fedoraproject.org/koji/builds)
+and found a few. You can test with any rpm, not just ones that are
+in FCOS.
+
+Once you git push you should notice the tagger pick up the event
+and perform some tagging. The RPMs should eventually end up in the
+[coreos-pool repodist directory](https://kojipkgs.stg.fedoraproject.org/repos-dist/coreos-pool).
+
 # Rough notes for deployment to another OpenShift instance:
 
 *NOTE*: This doesn't handle keytab right now but is a good way watch
