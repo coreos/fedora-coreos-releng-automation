@@ -10,6 +10,12 @@ RUN dnf update -y && dnf clean all
 # Install pagure/fedmsg libraries
 RUN dnf -y install dnf-plugins-core python3-libpagure fedora-messaging koji krb5-workstation && dnf clean all
 
+# Update koji src to 1.18 for multicall support (not yet packaged as an RPM)
+RUN dnf -y install git && dnf clean all
+RUN rm -rf /usr/lib/python3.7/site-packages/koji
+RUN git -C /opt/ clone -b koji-1.18.0 https://pagure.io/koji.git
+ENV PYTHONPATH=/opt/koji/
+
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
 # we aren't building anything.
