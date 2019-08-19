@@ -48,137 +48,137 @@ DEFAULT_GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
 EXAMPLE_MESSAGE_BODY = json.loads("""
 {
-  "forced": false,
-  "compare": "https://github.com/coreos/fedora-coreos-config/compare/b7205807daab...17f8d4c15a28",
-  "pusher": {
-    "email": "coreosbot@users.noreply.github.com",
-    "name": "coreosbot"
-  },
-  "sender": {
-    "url": "https://api.github.com/users/coreosbot",
-    "site_admin": false,
-    "html_url": "https://github.com/coreosbot",
-    "node_id": "MDQ6VXNlcjYxNDg4NTA=",
-    "gravatar_id": "",
-    "login": "coreosbot",
-    "type": "User",
-    "id": 6148850
-  },
-  "repository": {
-    "has_wiki": true,
-    "has_pages": false,
-    "updated_at": "2019-07-22T19:47:35Z",
-    "private": false,
-    "disabled": false,
-    "full_name": "coreos/fedora-coreos-config",
-    "owner": {
-      "name": "coreos",
-      "url": "https://api.github.com/users/coreos",
-      "site_admin": false,
-      "html_url": "https://github.com/coreos",
-      "email": null,
-      "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=",
-      "gravatar_id": "",
-      "login": "coreos",
-      "type": "Organization",
-      "id": 3730757
-    },
-    "id": 145484028,
-    "size": 123,
-    "archived": false,
-    "has_projects": false,
-    "watchers_count": 25,
-    "forks": 32,
-    "homepage": null,
-    "fork": false,
-    "description": "Base configuration for Fedora CoreOS",
-    "has_downloads": true,
-    "forks_count": 32,
-    "default_branch": "testing-devel",
-    "html_url": "https://github.com/coreos/fedora-coreos-config",
-    "node_id": "MDEwOlJlcG9zaXRvcnkxNDU0ODQwMjg=",
-    "has_issues": true,
-    "master_branch": "testing-devel",
-    "stargazers_count": 25,
-    "name": "fedora-coreos-config",
-    "open_issues_count": 10,
-    "watchers": 25,
-    "language": "Shell",
-    "license": {
-      "spdx_id": "NOASSERTION",
-      "url": null,
-      "node_id": "MDc6TGljZW5zZTA=",
-      "name": "Other",
-      "key": "other"
-    },
-    "url": "https://github.com/coreos/fedora-coreos-config",
-    "stargazers": 25,
-    "created_at": 1534810727,
-    "pushed_at": 1564157477,
-    "open_issues": 10,
-    "organization": "coreos"
-  },
-  "created": false,
-  "deleted": false,
-  "commits": [
-    {
+    "forced": false, 
+    "compare": "https://github.com/coreos/fedora-coreos-config/compare/d6c02b5cd107...6a53f43af882", 
+    "pusher": {
+      "email": "coreosbot@users.noreply.github.com", 
+      "name": "coreosbot"
+    }, 
+    "sender": {
+      "url": "https://api.github.com/users/coreosbot", 
+      "site_admin": false, 
+      "html_url": "https://github.com/coreosbot", 
+      "node_id": "MDQ6VXNlcjYxNDg4NTA=", 
+      "gravatar_id": "", 
+      "login": "coreosbot", 
+      "type": "User", 
+      "id": 6148850
+    }, 
+    "repository": {
+      "has_wiki": true, 
+      "has_pages": false, 
+      "updated_at": "2019-08-18T17:31:15Z", 
+      "private": false, 
+      "disabled": false, 
+      "full_name": "coreos/fedora-coreos-config", 
+      "owner": {
+        "name": "coreos", 
+        "url": "https://api.github.com/users/coreos", 
+        "site_admin": false, 
+        "html_url": "https://github.com/coreos", 
+        "email": null, 
+        "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=", 
+        "gravatar_id": "", 
+        "login": "coreos", 
+        "type": "Organization", 
+        "id": 3730757
+      }, 
+      "id": 145484028, 
+      "size": 163, 
+      "archived": false, 
+      "has_projects": false, 
+      "watchers_count": 28, 
+      "forks": 35, 
+      "homepage": null, 
+      "fork": false, 
+      "description": "Base configuration for Fedora CoreOS", 
+      "has_downloads": true, 
+      "forks_count": 35, 
+      "default_branch": "testing-devel", 
+      "html_url": "https://github.com/coreos/fedora-coreos-config", 
+      "node_id": "MDEwOlJlcG9zaXRvcnkxNDU0ODQwMjg=", 
+      "has_issues": true, 
+      "master_branch": "testing-devel", 
+      "stargazers_count": 28, 
+      "name": "fedora-coreos-config", 
+      "open_issues_count": 12, 
+      "watchers": 28, 
+      "language": "Shell", 
+      "license": {
+        "spdx_id": "NOASSERTION", 
+        "url": null, 
+        "node_id": "MDc6TGljZW5zZTA=", 
+        "name": "Other", 
+        "key": "other"
+      }, 
+      "url": "https://github.com/coreos/fedora-coreos-config", 
+      "stargazers": 28, 
+      "created_at": 1534810727, 
+      "pushed_at": 1566244300, 
+      "open_issues": 12, 
+      "organization": "coreos"
+    }, 
+    "created": false, 
+    "deleted": false, 
+    "commits": [
+      {
+        "committer": {
+          "email": "coreosbot@fedoraproject.org", 
+          "name": "CoreOS Bot"
+        }, 
+        "added": [
+          "manifest-lock.x86_64.json"
+        ], 
+        "author": {
+          "email": "coreosbot@fedoraproject.org", 
+          "name": "CoreOS Bot"
+        }, 
+        "distinct": true, 
+        "timestamp": "2019-08-19T19:51:38Z", 
+        "modified": [], 
+        "url": "https://github.com/coreos/fedora-coreos-config/commit/6a53f43af8826d0befd76656b2ce5e66c1111980", 
+        "tree_id": "7ee4648a6d5c43c17ebd6c617f911b4d358e83d7", 
+        "message": "lockfiles: import from bodhi-updates", 
+        "removed": [], 
+        "id": "6a53f43af8826d0befd76656b2ce5e66c1111980"
+      }
+    ], 
+    "after": "6a53f43af8826d0befd76656b2ce5e66c1111980", 
+    "fas_usernames": {
+      "coreos": "github_org_coreos"
+    }, 
+    "head_commit": {
       "committer": {
-        "email": "coreosbot@fedoraproject.org",
+        "email": "coreosbot@fedoraproject.org", 
         "name": "CoreOS Bot"
-      },
-      "added": [],
+      }, 
+      "added": [
+        "manifest-lock.x86_64.json"
+      ], 
       "author": {
-        "email": "coreosbot@fedoraproject.org",
+        "email": "coreosbot@fedoraproject.org", 
         "name": "CoreOS Bot"
-      },
-      "distinct": true,
-      "timestamp": "2019-07-26T16:11:15Z",
-      "modified": [
-        "manifest-lock.generated.x86_64.json"
-      ],
-      "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
-      "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
-      "message": "lockfiles: import from build 30.20190725.dev.0",
-      "removed": [],
-      "id": "17f8d4c15a28864c8229906a5723b8de9e00804a"
-    }
-  ],
-  "after": "17f8d4c15a28864c8229906a5723b8de9e00804a",
-  "fas_usernames": {
-    "coreos": "github_org_coreos"
-  },
-  "head_commit": {
-    "committer": {
-      "email": "coreosbot@fedoraproject.org",
-      "name": "CoreOS Bot"
-    },
-    "added": [],
-    "author": {
-      "email": "coreosbot@fedoraproject.org",
-      "name": "CoreOS Bot"
-    },
-    "distinct": true,
-    "timestamp": "2019-07-26T16:11:15Z",
-    "modified": [
-      "manifest-lock.generated.x86_64.json"
-    ],
-    "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
-    "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
-    "message": "lockfiles: import from build 30.20190725.dev.0",
-    "removed": [],
-    "id": "17f8d4c15a28864c8229906a5723b8de9e00804a"
-  },
-  "organization": {
-    "url": "https://api.github.com/orgs/coreos",
-    "login": "coreos",
-    "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=",
-    "description": "Key components to secure, simplify and automate your container infrastructure",
-    "id": 3730757
-  },
-  "ref": "refs/heads/testing-devel",
-  "base_ref": null,
-  "before": "b7205807daab0bbe1a3e65383b5155c2e37f03c6"
-}
+      }, 
+      "distinct": true, 
+      "timestamp": "2019-08-19T19:51:38Z", 
+      "modified": [], 
+      "url": "https://github.com/coreos/fedora-coreos-config/commit/6a53f43af8826d0befd76656b2ce5e66c1111980", 
+      "tree_id": "7ee4648a6d5c43c17ebd6c617f911b4d358e83d7", 
+      "message": "lockfiles: import from bodhi-updates", 
+      "removed": [], 
+      "id": "6a53f43af8826d0befd76656b2ce5e66c1111980"
+    }, 
+    "organization": {
+      "url": "https://api.github.com/orgs/coreos", 
+      "login": "coreos", 
+      "node_id": "MDEyOk9yZ2FuaXphdGlvbjM3MzA3NTc=", 
+      "description": "Key components to secure, simplify and automate your container infrastructure", 
+      "id": 3730757
+    }, 
+    "ref": "refs/heads/testing-devel", 
+    "base_ref": null, 
+    "before": "d6c02b5cd10751fe4b44f5fae44b45293f334cdd"
+  }
 """
 )
 
@@ -274,7 +274,7 @@ class Consumer(object):
 
         # Now grab data from the commit we should operate on:
         # XXX: should update for multi-arch
-        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.generated.x86_64.json'
+        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.x86_64.json'
         logger.info(f'Attempting to retrieve data from {url}')
         r = requests.get(url)
 
