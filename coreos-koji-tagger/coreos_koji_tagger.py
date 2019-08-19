@@ -502,17 +502,8 @@ def parse_lockfile_data(text: str) -> list:
 
 def get_releasever_from_buildroottag(buildroottag: str) -> str:
     logger.debug(f'Checking buildroottag {buildroottag}')
-    if 'afterburn' in buildroottag:
-        # example: module-afterburn-rolling-3020190524194016-2c789dff-build
-        releasever = re.search('module-afterburn-rolling-(\d\d)',
-                                                buildroottag).group(1)
-    elif 'zincati' in buildroottag:
-        # example: module-zincati-rolling-3020190711144249-a23e773d-build
-        releasever = re.search('module-zincati-rolling-(\d\d)',
-                                                buildroottag).group(1)
-    elif 'fedora-coreos-pinger' in buildroottag:
-        # example: module-fedora-coreos-pinger-rolling-3020190720131029-a23e773d-build
-        releasever = re.search('module-fedora-coreos-pinger-rolling-(\d\d)',
+    if buildroottag.startswith('module-') and buildroottag.endswith('-build'):
+        releasever = re.search('module-.*-(\d\d)[\d]{14}-[a-f0-9]{8}-build$',
                                                 buildroottag).group(1)
     else:
         # example: f30-build
