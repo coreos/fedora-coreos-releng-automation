@@ -134,7 +134,7 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
       "distinct": true,
       "timestamp": "2019-07-26T16:11:15Z",
       "modified": [
-        "manifest-lock.generated.x86_64.json"
+        "manifest-lock.x86_64.json"
       ],
       "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
       "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
@@ -160,7 +160,7 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
     "distinct": true,
     "timestamp": "2019-07-26T16:11:15Z",
     "modified": [
-      "manifest-lock.generated.x86_64.json"
+      "manifest-lock.x86_64.json"
     ],
     "url": "https://github.com/coreos/fedora-coreos-config/commit/17f8d4c15a28864c8229906a5723b8de9e00804a",
     "tree_id": "a3ab160b89b264870cf3cecd7b4d6c252e8a5482",
@@ -274,7 +274,7 @@ class Consumer(object):
 
         # Now grab data from the commit we should operate on:
         # XXX: should update for multi-arch
-        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.generated.x86_64.json'
+        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.x86_64.json'
         logger.info(f'Attempting to retrieve data from {url}')
         r = requests.get(url)
 
