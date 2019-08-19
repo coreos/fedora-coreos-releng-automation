@@ -262,7 +262,6 @@ class Consumer(object):
         msg = message.body
         branch = msg['ref']
         repo   = msg['repository']['full_name']
-        commit = msg['head_commit']['id']
 
         if (repo != self.github_repo_fullname):
             logger.info(f'Skipping message from unrelated repo: {repo}')
@@ -270,6 +269,15 @@ class Consumer(object):
 
         if (branch != self.github_repo_branch):
             logger.info(f'Skipping message from unrelated branch: {branch}')
+            return
+
+        # Some messages don't have commit information
+        # For example: https://apps.fedoraproject.org/datagrepper/id?id=2019-f32c811b-658b-4ac7-a455-a7edf616a033&is_raw=true&size=extra-large
+        commit = None
+        if msg['head_commit']:
+            commit = msg['head_commit']['id']
+        if commit is None:
+            logger.error('No commit id in message!')
             return
 
         # Now grab data from the commit we should operate on:
