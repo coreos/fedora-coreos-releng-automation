@@ -226,10 +226,10 @@ async def propagate_files(cfg):
             # get the list of files from the source ref
             all_files = git.cmd_output('ls-tree', source_ref,
                                        '--name-only').splitlines()
-            targeted_files = [f for f in all_files
-                              if not matches_patterns(f, skip_files)]
+            files_to_import = [f for f in all_files
+                               if not matches_patterns(f, skip_files)]
 
-            if len(targeted_files) == 0:
+            if len(files_to_import) == 0:
                 eprint(f"No files to propagate from {source_ref}")
                 last_source_ref_checksum = source_ref_checksum
                 continue
@@ -238,7 +238,7 @@ async def propagate_files(cfg):
                 git.checkout(target_ref)
 
                 # bring files into the index
-                git.cmd('checkout', source_ref, '--', *targeted_files)
+                git.cmd('checkout', source_ref, '--', *files_to_import)
 
                 if git.has_diff():
                     git.commit(f"tree: import changes from {source_ref}")
