@@ -237,7 +237,16 @@ async def propagate_files(cfg):
             for target_ref in target_refs:
                 git.checkout(target_ref)
 
-                # bring files into the index
+                # We want the same semantics as `rsync --delete`, i.e. delete
+                # files in the target ref no longer in the source ref. We'll do
+                # this by first deleting all the files, then importing the new
+                # files.
+                all_files = git.cmd_output('ls-tree', target_ref,
+                                           '--name-only').splitlines()
+                files_to_delete = [f for f in all_files
+                                   if not matches_patterns(f, skip_files)]
+
+                git.cmd('rm', '-r', '--', *files_to_delete)
                 git.cmd('checkout', source_ref, '--', *files_to_import)
 
                 if git.has_diff():
