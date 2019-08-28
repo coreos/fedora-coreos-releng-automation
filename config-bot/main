@@ -5,12 +5,18 @@ import re
 import sys
 import json
 import toml
+import logging
 import fnmatch
 import aiohttp
 import asyncio
 import argparse
 import tempfile
 import subprocess
+
+# Set local logging
+logging.basicConfig(
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    level=logging.INFO)
 
 
 DEFAULT_CONFIG_FILE_PATH = "/etc/config-bot.toml"
@@ -72,8 +78,10 @@ async def sync_build_lockfiles(cfg):
         # for easier hacking; just act immediately on first iteration
         # this allows us to safely use `continue` afterwards
         if not first:
+            logging.info("end sync_build_lockfiles")
             await asyncio.sleep(period)
         first = False
+        logging.info("start sync_build_lockfiles")
 
         for stream in cfg['streams']:
             builds_json = f'{base_url}/{stream}/builds/builds.json'
@@ -82,7 +90,7 @@ async def sync_build_lockfiles(cfg):
                 # problem fetching the json; just ignore and we'll retry
                 continue
             elif len(builds['builds']) == 0:
-                eprint(f"Stream {stream} has no builds!")
+                logging.error(f"Stream {stream} has no builds!")
                 continue
 
             latest_build = builds['builds'][0]
@@ -100,7 +108,7 @@ async def sync_build_lockfiles(cfg):
 async def http_fetch(url):
     async with aiohttp.request(url=url, method='GET') as resp:
         if resp.status != 200:
-            eprint(f"Error fetching {url}: got {resp.status}")
+            logging.error(f"Error fetching {url}: got {resp.status}")
             return None
         return await resp.read()
 
@@ -135,7 +143,7 @@ async def do_sync(base_url, method, stream, build):
             except Exception as e:
                 # this can happen if we raced against someone/something
                 # else pushing to the ref and we're out of date; we'll retry
-                print(f"Got exception during push: {e}")
+                logging.info(f"Got exception during push: {e}")
                 return False
 
     return True
@@ -157,8 +165,10 @@ async def promote_lockfiles(cfg):
     while True:
 
         if not first:
+            logging.info("end promote_lockfiles")
             await asyncio.sleep(period)
         first = False
+        logging.info("start promote_lockfiles")
 
         async with git:
             # is there a new commit?
@@ -175,7 +185,7 @@ async def promote_lockfiles(cfg):
                      matches_patterns(f, ['manifest-lock.generated.*.json'])]
 
             if len(locks) == 0:
-                eprint(f"No lockfiles found in {source_ref}")
+                logging.error(f"No lockfiles found in {source_ref}")
                 last_source_ref_checksum = source_ref_checksum
                 continue
 
@@ -191,7 +201,7 @@ async def promote_lockfiles(cfg):
                 try:
                     git.push(target_ref)
                 except Exception as e:
-                    print(f"Got exception during push: {e}")
+                    logging.error(f"Got exception during push: {e}")
                     continue
 
             last_source_ref_checksum = source_ref_checksum
@@ -214,8 +224,10 @@ async def propagate_files(cfg):
     while True:
 
         if not first:
+            logging.info("end propagate_files")
             await asyncio.sleep(period)
         first = False
+        logging.info("start propagate_files")
 
         async with git:
             # is there a new commit?
@@ -230,7 +242,7 @@ async def propagate_files(cfg):
                                if not matches_patterns(f, skip_files)]
 
             if len(files_to_import) == 0:
-                eprint(f"No files to propagate from {source_ref}")
+                logging.error(f"No files to propagate from {source_ref}")
                 last_source_ref_checksum = source_ref_checksum
                 continue
 
@@ -254,7 +266,7 @@ async def propagate_files(cfg):
                     try:
                         git.push(target_ref)
                     except Exception as e:
-                        print(f"Got exception during push: {e}")
+                        logging.error(f"Got exception during push: {e}")
                         break
             else:
                 last_source_ref_checksum = source_ref_checksum
@@ -272,10 +284,6 @@ def period_to_seconds(s):
     assert re.match('^[0-9]+[smh]$', s)
     multi = {"s": 1, "m": 60, "h": 60*60}
     return int(s[:-1]) * multi[s[-1:]]
-
-
-def eprint(*args):
-    print(*args, file=sys.stderr)
 
 
 class Git:
