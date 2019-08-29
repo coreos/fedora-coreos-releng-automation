@@ -31,13 +31,27 @@ OpenShift web interface.
 
 # Testing in Fedora Stage
 
-In order to test in Fedora Stage you must change the manifest file(s)
-in the branch of the repo currently being monitored by stage. You can
-see the branch/repo info in 
+In order to test a new version of coreos-koji-tagger in Fedora Stage
+there are two inputs which you can control:
+
+- The coreos-koji-tagger source code
+- The input manifest lockfiles
+
+In order to update the source code you need to push to the repo/branch
+currently being monitored by the
 [the buildconfig](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml).
+for the staging environment. This will most likely be the
+`fedora-infra-staging` branch of this git repo.
+
+Once you have the version of coreos-koji-tagger that you want running
+in stage you need to push code to the repo/branch currently being monitored
+by the staging coreos-koji-tagger. This involves changing the manifest file(s)
+and pushing to the git repo. To see the branch/repo currently being
+monitored you can see that in the
+[deploymentconfig](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/deploymentconfig.yml).
 
 You'll need to either push to the target branch/repo or you'll need to
-update the buildconfig to point to another one that you control. The
+update the deploymentconfig to point to another one that you control. The
 repo will need to be set up publish events to fedmsg using
 [github2fedmsg](https://apps.fedoraproject.org/github2fedmsg) so that
 the script can pick up the event and process it.
