@@ -283,7 +283,7 @@ class Consumer(object):
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
         for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
-            for lockfile in ['manifest-lock']:
+            for lockfile in ['manifest-lock', 'manifest-lock.overrides']:
                 url = f'https://raw.githubusercontent.com/{repo}/{commit}/{lockfile}.{arch}.json'
                 logger.info(f'Attempting to retrieve data from {url}')
                 r = requests.get(url)
