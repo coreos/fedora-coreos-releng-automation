@@ -262,7 +262,6 @@ class Consumer(object):
         msg = message.body
         branch = msg['ref']
         repo   = msg['repository']['full_name']
-        commit = msg['head_commit']['id']
 
         if (repo != self.github_repo_fullname):
             logger.info(f'Skipping message from unrelated repo: {repo}')
@@ -272,12 +271,28 @@ class Consumer(object):
             logger.info(f'Skipping message from unrelated branch: {branch}')
             return
 
-        # Now grab data from the commit we should operate on:
-        # XXX: should update for multi-arch
-        url = f'https://raw.githubusercontent.com/{repo}/{commit}/manifest-lock.x86_64.json'
-        logger.info(f'Attempting to retrieve data from {url}')
-        r = requests.get(url)
+        # Some messages don't have commit information
+        # For example: https://apps.fedoraproject.org/datagrepper/id?id=2019-f32c811b-658b-4ac7-a455-a7edf616a033&is_raw=true&size=extra-large
+        commit = None
+        if msg['head_commit']:
+            commit = msg['head_commit']['id']
+        if commit is None:
+            logger.error('No commit id in message!')
+            return
 
+        # Now grab lockfile data from the commit we should operate on:
+        desiredrpms = set()
+        for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
+            for lockfile in ['manifest-lock', 'manifest-lock.overrides']:
+                url = f'https://raw.githubusercontent.com/{repo}/{commit}/{lockfile}.{arch}.json'
+                logger.info(f'Attempting to retrieve data from {url}')
+                r = requests.get(url)
+                if r.ok:
+                    # parse the lockfile and add the set of rpm NEVRAs (strings)
+                    desiredrpms.update(parse_lockfile_data(r.text))
+                else:
+                    # Log any errors we encounter. 404s are ok, but won't hurt to log
+                    logger.warn('URL request error: %s' % r.text.strip())
 
         # NOMENCLATURE:
         # 
@@ -301,9 +316,6 @@ class Consumer(object):
         # that with existing koji builds in the tag. Once we have a list of
         # koji builds that aren't in the tag we can add the koji pkg to the
         # tag (if needed) and then tag the koji build into the tag.
-
-        # parse the lockfile and get a set of rpm NEVRAs (strings)
-        desiredrpms = set(parse_lockfile_data(r.text))
 
         # convert the NEVRAs into a dict of build IDs -> BuildInfo objects
         buildsinfo = self.get_buildsinfo_from_rpmnevras(desiredrpms)
@@ -473,9 +485,9 @@ def get_NVRA_from_NEVRA(string: str) -> str:
     nvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
     return nvra
 
-def parse_lockfile_data(text: str) -> list:
+def parse_lockfile_data(text: str) -> set:
     """
-    Parse the rpm lockfile format and return a list of rpms in
+    Parse the rpm lockfile format and return a set of rpms in
     NEVRA form.
     Best documention on the format for now:
         https://github.com/projectatomic/rpm-ostree/commit/8ff0ee9c89ecc0540182b5b506455fc275d27a61
@@ -498,7 +510,7 @@ def parse_lockfile_data(text: str) -> list:
     logger.debug(json.dumps(data, indent=4, sort_keys=True))
 
     # We only care about the NEVRAs, so just accumulate those and return
-    return [f'{name}-{v["evra"]}' for name, v in data['packages'].items()]
+    return set([f'{name}-{v["evra"]}' for name, v in data['packages'].items()])
 
 def get_releasever_from_buildroottag(buildroottag: str) -> str:
     logger.debug(f'Checking buildroottag {buildroottag}')
