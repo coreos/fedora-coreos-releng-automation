@@ -112,12 +112,10 @@ for f in files:
             }
         i = input_.get("images", {}).get("kernel", None)
         if i is not None:
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe",{})
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["kernel"] = artifact(i)
+            arch_dict["media"]["metal"]["artifacts"].setdefault("installer-pxe", {})["kernel"] = artifact(i)
         i = input_.get("images", {}).get("initramfs", None)
         if i is not None:
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe", {})
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["initramfs"] = artifact(i)
+            arch_dict["media"]["metal"]["artifacts"].setdefault("installer-pxe", {})["initramfs"] = artifact(i)
 
         # if architectures as a whole or the individual arch is empty just push our changes
         if out.get('architectures', None) is None or out['architectures'].get(arch, None) is None:
