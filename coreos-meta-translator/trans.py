@@ -116,6 +116,17 @@ for f in files:
         i = input_.get("images", {}).get("initramfs", None)
         if i is not None:
             arch_dict["media"]["metal"]["artifacts"].setdefault("installer-pxe", {})["initramfs"] = artifact(i)
+        i = input_.get("images", {}).get("live-iso", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"]["iso"] = {
+                "disk": artifact(i)
+            }
+        i = input_.get("images", {}).get("live-kernel", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("pxe", {})["kernel"] = artifact(i)
+        i = input_.get("images", {}).get("live-initramfs", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("pxe", {})["initramfs"] = artifact(i)
 
         # if architectures as a whole or the individual arch is empty just push our changes
         if out.get('architectures', None) is None or out['architectures'].get(arch, None) is None:
