@@ -101,8 +101,8 @@ for f in files:
         # metal specific additions
         arch_dict["media"]["metal"] = arch_dict["media"].get("metal", {})
         arch_dict["media"]["metal"]["artifacts"] = arch_dict["media"]["metal"].get("artifacts", {})
-        if input_.get("images", {}).get("iso", None) is not None:
-            i = input_.get("images").get("iso")
+        i = input_.get("images", {}).get("iso", None)
+        if i is not None:
             arch_dict["media"]["metal"]["artifacts"]["installer.iso"] = {
                 "disk": {
                     "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
@@ -110,16 +110,16 @@ for f in files:
                     "sha256": i.get("sha256")
                 }
             }
-        if input_.get("images", {}).get("kernel", None) is not None:
-            i = input_.get("images").get("kernel")
+        i = input_.get("images", {}).get("kernel", None)
+        if i is not None:
             arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe",{})
             arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["kernel"] = {
                 "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
                 "signature": "{}.sig".format(url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))),
                 "sha256": i.get("sha256")
             }
-        if input_.get("images", {}).get("initramfs", None) is not None:
-            i = input_.get("images").get("initramfs")
+        i = input_.get("images", {}).get("initramfs", None)
+        if i is not None:
             arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe", {})
             arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["initramfs"] = {
                 "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
