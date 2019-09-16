@@ -66,6 +66,14 @@ for f in files:
         ensure_dup(input_, out, "buildid", "release")
         ensure_dup(input_.get('coreos-assembler.container-config-git'), out, 'branch', 'stream')
 
+        def artifact(i):
+            base_url = url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))
+            return {
+                "location": base_url,
+                "signature": "{}.sig".format(base_url),
+                "sha256": i.get("sha256")
+            }
+
         print(f"{out['stream']} stream")
         print(f"  {arch} images:")
         # build the architectures dict
@@ -80,11 +88,7 @@ for f in files:
                 arch_dict['media'][ga] = {
                     "artifacts": {
                         ext: {
-                            "disk": {
-                                "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
-                                "signature": "{}.sig".format(url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))),
-                                "sha256": i.get("sha256")
-                            }
+                            "disk": artifact(i)
                         }
                     }
                 }
@@ -101,31 +105,28 @@ for f in files:
         # metal specific additions
         arch_dict["media"]["metal"] = arch_dict["media"].get("metal", {})
         arch_dict["media"]["metal"]["artifacts"] = arch_dict["media"]["metal"].get("artifacts", {})
-        if input_.get("images", {}).get("iso", None) is not None:
-            i = input_.get("images").get("iso")
+        i = input_.get("images", {}).get("iso", None)
+        if i is not None:
             arch_dict["media"]["metal"]["artifacts"]["installer.iso"] = {
-                "disk": {
-                    "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
-                    "signature": "{}.sig".format(url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))),
-                    "sha256": i.get("sha256")
-                }
+                "disk": artifact(i)
             }
-        if input_.get("images", {}).get("kernel", None) is not None:
-            i = input_.get("images").get("kernel")
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe",{})
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["kernel"] = {
-                "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
-                "signature": "{}.sig".format(url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))),
-                "sha256": i.get("sha256")
+        i = input_.get("images", {}).get("kernel", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("installer-pxe", {})["kernel"] = artifact(i)
+        i = input_.get("images", {}).get("initramfs", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("installer-pxe", {})["initramfs"] = artifact(i)
+        i = input_.get("images", {}).get("live-iso", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"]["iso"] = {
+                "disk": artifact(i)
             }
-        if input_.get("images", {}).get("initramfs", None) is not None:
-            i = input_.get("images").get("initramfs")
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"] = arch_dict["media"]["metal"]["artifacts"].get("installer-pxe", {})
-            arch_dict["media"]["metal"]["artifacts"]["installer-pxe"]["initramfs"] = {
-                "location": url_builder(out.get('stream'), out.get('release'), arch, i.get('path')),
-                "signature": "{}.sig".format(url_builder(out.get('stream'), out.get('release'), arch, i.get('path'))),
-                "sha256": i.get("sha256")
-            }
+        i = input_.get("images", {}).get("live-kernel", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("pxe", {})["kernel"] = artifact(i)
+        i = input_.get("images", {}).get("live-initramfs", None)
+        if i is not None:
+            arch_dict["media"]["metal"]["artifacts"].setdefault("pxe", {})["initramfs"] = artifact(i)
 
         # if architectures as a whole or the individual arch is empty just push our changes
         if out.get('architectures', None) is None or out['architectures'].get(arch, None) is None:
