@@ -227,6 +227,9 @@ class Consumer(object):
         self.koji_user         = COREOS_KOJI_USER
         self.koji_client       = koji.ClientSession(KOJI_SERVER_URL)
 
+        logger.info("Watching commits against %s branch of %s repo" %
+                    (self.github_repo_branch, self.github_repo_fullname))
+
         # If a keytab was specified let's try to auth.
         self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
         if self.keytab_file:
