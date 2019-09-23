@@ -260,9 +260,11 @@ async def propagate_files(cfg):
 
                 git.cmd('rm', '-r', '--', *files_to_delete)
                 git.cmd('checkout', source_ref, '--', *files_to_import)
+                commit = git.cmd_output('rev-parse', source_ref)
 
                 if git.has_diff():
-                    git.commit(f"tree: import changes from {source_ref}")
+                    git.commit(f"tree: import changes from {source_ref} "
+                               f"at {commit}")
                     try:
                         git.push(target_ref)
                     except Exception as e:
