@@ -38,7 +38,7 @@ main() {
         exit 0
     fi
 
-    git commit -m "tree: promote changes from ${src_branch}"
+    git commit -m "tree: promote changes from ${src_branch} at ${fetch_head}"
 }
 
 fatal() {
