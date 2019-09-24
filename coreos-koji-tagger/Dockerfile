@@ -7,8 +7,8 @@ ENV PYTHONUNBUFFERED=true
 # Get any latest updates since last container spin
 RUN dnf update -y && dnf clean all
 
-# Install pagure/fedmsg libraries
-RUN dnf -y install dnf-plugins-core python3-libpagure fedora-messaging koji krb5-workstation && dnf clean all
+# Install fedmsg/koji libraries
+RUN dnf -y install dnf-plugins-core fedora-messaging koji krb5-workstation && dnf clean all
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
@@ -37,7 +37,7 @@ RUN sed -i 's/format =.*$/format = "%(asctime)s %(levelname)s %(name)s - %(messa
 # We only care about org.fedoraproject.prod.github.push messages
 RUN sed -i 's/^routing_keys.*$/routing_keys = ["org.fedoraproject.prod.github.push"]/' /work/my_config.toml
 
-# Put compose-tracker into a location that can be imported
+# Put the file into a location that can be imported
 ADD coreos_koji_tagger.py /usr/lib/python3.7/site-packages/
 
 # Environment variable to be defined by the user that defines the
@@ -55,6 +55,6 @@ ENV COREOS_KOJI_TAGGER_KEYTAB_FILE ''
 # https://community.hortonworks.com/content/supportkb/222432/error-kadminlocal-invalid-uid-in-persistent-keyrin.html
 RUN sed -i 's/^    default_ccache_name/#   default_ccache_name/' /etc/krb5.conf
 
-# Call fedora-messaging CLI and tell it to use the ComposeTracker
-# class from the compose-tracker module.
+# Call fedora-messaging CLI and tell it to use the Consumer
+# class from the included module.
 CMD fedora-messaging --conf /work/my_config.toml consume --callback=coreos_koji_tagger:Consumer
