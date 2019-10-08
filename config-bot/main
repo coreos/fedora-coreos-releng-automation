@@ -41,6 +41,10 @@ def main():
     if o is not None:
         loop.create_task(promote_lockfiles(o))
 
+    o = cfg.get('bump-lockfiles')
+    if o is not None:
+        loop.create_task(bump_lockfiles(o))
+
     o = cfg.get('propagate-files')
     if o is not None:
         loop.create_task(propagate_files(o))
@@ -207,6 +211,38 @@ async def promote_lockfiles(cfg):
             last_source_ref_checksum = source_ref_checksum
 
 
+async def bump_lockfiles(cfg):
+    # this is the only mode we support right now
+    assert cfg['trigger']['mode'] == 'periodic'
+    period = period_to_seconds(cfg['trigger']['period'])
+
+    # we only support direct git pushes for now
+    assert cfg['method'] == 'push'
+
+    first = True
+    while True:
+
+        if not first:
+            logging.info("end bump_lockfiles")
+            await asyncio.sleep(period)
+        first = False
+        logging.info("start bump_lockfiles")
+
+        async with git:
+            for ref in cfg['refs']:
+                git.checkout(ref)
+                with Cosa(git.path()) as cosa:
+                    cosa.cmd("fetch", "--update-lockfile")
+
+                if git.has_diff():
+                    git.commit(f"lockfiles: bump to latest")
+                    try:
+                        git.push(ref)
+                    except Exception as e:
+                        logging.error(f"Got exception during push: {e}")
+                        continue
+
+
 async def propagate_files(cfg):
     # this is the only mode we support right now
     assert cfg['trigger']['mode'] == 'periodic'
@@ -318,7 +354,7 @@ class Git:
         url = f'https://{token_un}:{token_pw}@github.com/{gh_owner}/{gh_name}'
         self.cmd('clone', '--bare', url, '.')
 
-        # we don't technically need a lockfile if we make sure that we never
+        # we don't technically need a lock if we make sure that we never
         # `await` operations when using `with git`, though that's something I
         # can easily imagine regressing on
         self._lock = asyncio.Lock()
@@ -385,6 +421,32 @@ class Git:
             return True
 
         return False
+
+
+class Cosa:
+
+    '''
+        Convenience wrapper for creating and nuking temporary cosa workdirs.
+    '''
+
+    def __init__(self, src_config_path):
+        self._src_config_path = src_config_path
+        self._workdir = None
+
+    def __enter__(self):
+        d = tempfile.TemporaryDirectory(prefix="cosa.work.")
+        self._workdir = d
+        self.cmd("init", self._src_config_path)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        assert self._workdir
+        self._workdir.cleanup()
+        self._workdir = None
+
+    def cmd(self, *args):
+        assert self._workdir
+        subprocess.check_call(['cosa', *args], cwd=self._workdir.name)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:30
+FROM quay.io/coreos-assembler/coreos-assembler:master
 
 RUN dnf -y install git python3-toml python3-aiohttp && dnf clean all
 

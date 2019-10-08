@@ -15,11 +15,20 @@ trigger.mode = 'periodic'
 trigger.period = '15m'
 method = 'push'
 
-[promote-lockfiles]
-source-ref = 'bodhi-updates'
-target-ref = 'testing-devel'
+# We're not using this anymore, likely will delete it eventually
+#[promote-lockfiles]
+#source-ref = 'bodhi-updates'
+#target-ref = 'testing-devel'
+#trigger.mode = 'periodic'
+#trigger.period = '24h'
+#method = 'push'
+
+[bump-lockfiles]
+refs = [
+    'testing-devel',
+]
 trigger.mode = 'periodic'
-trigger.period = '24h'
+trigger.period = '6h'
 method = 'push'
 
 [propagate-files]
