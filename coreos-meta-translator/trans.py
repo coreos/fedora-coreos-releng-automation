@@ -142,7 +142,7 @@ for f in files:
                 elif val == out_arch['media'][media_type]:
                     continue
                 else:
-                    raise Exception("differing media type detected: input_file '{}', media_type '{}'".format(input_file, media_type))
+                    raise Exception("differing content detected for media type '{}'".format(media_type))
 
 with open(release_file, 'w') as w:
     json.dump(out, w)
