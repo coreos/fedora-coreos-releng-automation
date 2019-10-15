@@ -20,8 +20,8 @@ def ensure_dup(inp, out, inp_key, out_key):
 def url_builder(stream, version, arch, path):
     return f"https://builds.coreos.fedoraproject.org/prod/streams/{stream}/builds/{version}/{arch}/{path}"
 
-def get_extension(path, modifier):
-    return path.rsplit(modifier)[1][1:]
+def get_extension(path, modifier, arch):
+    return path.rsplit(f'{modifier}.{arch}')[1][1:]
 
 
 parser = ArgumentParser()
@@ -84,7 +84,7 @@ for f in files:
             if input_.get("images", {}).get(ga, None) is not None:
                 print(f"   - {ga}")
                 i = input_.get("images").get(ga)
-                ext = get_extension(i.get('path'), ga)
+                ext = get_extension(i.get('path'), ga, arch)
                 arch_dict['media'][ga] = {
                     "artifacts": {
                         ext: {
