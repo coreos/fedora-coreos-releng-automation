@@ -243,12 +243,15 @@ class Consumer(object):
                         '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
             logger.info('Will not attempt koji write operations')
 
+        # do an initial run on startup in case we're out of sync
+        self.process_lockfiles()
+
     def __call__(self, message: fedora_messaging.api.Message):
         # Catch any exceptions and don't raise them further because
         # it will cause /usr/bin/fedora-messaging to crash and we'll
         # lose the traceback logs from the container
         try:
-            self.process(message)
+            self.process_message(message)
         except Exception as e:
             logger.error('Caught Exception!')
             logger.error('###################################')
@@ -257,7 +260,7 @@ class Consumer(object):
             logger.error('\t continuing...')
             pass
 
-    def process(self, message: fedora_messaging.api.Message):
+    def process_message(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
         logger.debug(message.body)
 
@@ -283,11 +286,17 @@ class Consumer(object):
             logger.error('No commit id in message!')
             return
 
+        self.process_lockfiles(commit)
+
+    def process_lockfiles(self, commit=None):
+
+        rev = commit or self.github_repo_branch[len("refs/heads/"):]
+
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
         for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
             for lockfile in ['manifest-lock', 'manifest-lock.overrides']:
-                url = f'https://raw.githubusercontent.com/{repo}/{commit}/{lockfile}.{arch}.json'
+                url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{arch}.json'
                 logger.info(f'Attempting to retrieve data from {url}')
                 r = requests.get(url)
                 if r.ok:
