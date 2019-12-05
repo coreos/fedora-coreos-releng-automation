@@ -251,11 +251,11 @@ class Consumer(object):
         # If a keytab was specified let's try to auth.
         self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
         if self.keytab_file:
+            # Assert the defined keytab file exists
             if not os.path.exists(self.keytab_file):
                 raise Exception("The specified keytab file "
                                 "does not exist: %s" % self.keytab_file)
-            principal = find_principal_from_keytab(self.keytab_file)
-            self.koji_client.gssapi_login(principal, self.keytab_file)
+            self.koji_login()
         else:
             logger.info('No keytab file defined in '
                         '$COREOS_KOJI_TAGGER_KEYTAB_FILE')
@@ -294,6 +294,10 @@ class Consumer(object):
         if commit is None:
             logger.error('No commit id in message!')
             return
+
+        # In case our connection has expired, re-Auth to koji
+        if self.keytab_file:
+            self.koji_login()
 
         self.process_lockfiles(commit)
 
@@ -436,6 +440,13 @@ class Consumer(object):
                 watch_tasks(self.koji_client, [task], poll_interval=10)
                 logger.info('Dist-repo task has finished')
 
+    def koji_login(self):
+        # If already authenticated then nothing to do
+        if self.koji_client.getLoggedInUser():
+            return
+        # Login!
+        principal = find_principal_from_keytab(self.keytab_file)
+        self.koji_client.gssapi_login(principal, self.keytab_file)
 
     def get_buildsinfo_from_rpmnevras(self, rpmnevras: set) -> dict:
         """
