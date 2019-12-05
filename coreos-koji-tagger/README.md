@@ -98,6 +98,6 @@ podman run -it --rm -v $PWD/:/pwd/ \
 ```
 
 If you'd like you can add `--entrypoint=/bin/bash` and run 
-`/pwd/coreos_koji_tagger.py` directly. If you modify the json at the bottom
+`/pwd/coreos_koji_tagger.py` directly. If you modify the yaml at the bottom
 of the file you can test it out or actually have it call koji
 to apply tags.

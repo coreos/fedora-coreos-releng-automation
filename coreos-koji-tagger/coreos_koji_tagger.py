@@ -11,6 +11,7 @@ import requests
 import subprocess
 import sys
 import traceback
+import yaml
 
 from koji_cli.lib import watch_tasks
 
@@ -229,8 +230,7 @@ class BuildInfo(object):
         def nvr(self, value):
             self._nvr = value
 
-# Given a repo (and thus an input JSON) analyze existing koji tag set
-# and tag in any missing packages
+# Given a repo analyze existing koji tag set and tag in any missing packages
 class Consumer(object):
     def __init__(self):
         self.target_tag        = KOJI_TARGET_TAG
@@ -305,15 +305,18 @@ class Consumer(object):
         desiredrpms = set()
         for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
             for lockfile in ['manifest-lock', 'manifest-lock.overrides']:
-                url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{arch}.json'
-                logger.info(f'Attempting to retrieve data from {url}')
-                r = requests.get(url)
-                if r.ok:
-                    # parse the lockfile and add the set of rpm NEVRAs (strings)
-                    desiredrpms.update(parse_lockfile_data(r.text))
-                else:
-                    # Log any errors we encounter. 404s are ok, but won't hurt to log
-                    logger.warning('URL request error: %s' % r.text.strip())
+                for filetype in ['yaml', 'json']:
+                    url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{arch}.{filetype}'
+                    logger.info(f'Attempting to retrieve data from {url}')
+                    r = requests.get(url)
+                    if r.ok:
+                        # parse the lockfile and add the set of rpm NEVRAs (strings)
+                        desiredrpms.update(parse_lockfile_data(r.text, filetype))
+                        break # If both yaml and json files exist, only parse one 
+                              # of them. Prefer yaml.
+                    else:
+                        # Log any errors we encounter. 404s are ok, but won't hurt to log
+                        logger.warning('URL request error: %s' % r.text.strip())
 
         # NOMENCLATURE:
         # 
@@ -506,7 +509,7 @@ def get_NVRA_from_NEVRA(string: str) -> str:
     nvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
     return nvra
 
-def parse_lockfile_data(text: str) -> set:
+def parse_lockfile_data(text: str, filetype: str) -> set:
     """
     Parse the rpm lockfile format and return a set of rpms in
     NEVRA form.
@@ -518,17 +521,26 @@ def parse_lockfile_data(text: str) -> set:
       {
         "packages": {
           "GeoIP": {
-            "evra": "1.6.12-5.fc30.x86_64",
-            "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
+            "evra": "1.6.12-5.fc30.x86_64"
           }
         }
       }
+
+    or 
+
+      packages:
+        GeoIP:
+          evra: 1.6.12-5.fc30.x86_64
     """
 
-    # The data is JSON (yay)
-    data = json.loads(text)
-    logger.debug('Retrieved JSON data:')
-    logger.debug(json.dumps(data, indent=4, sort_keys=True))
+    if filetype == 'json':
+        data = json.loads(text)
+        logger.debug('Retrieved JSON data:')
+        logger.debug(json.dumps(data, indent=4, sort_keys=True))
+    elif filetype == 'yaml':
+        data = yaml.safe_load(text)
+        logger.debug('Retrieved YAML data:')
+        logger.debug(yaml.safe_dump(data))
 
     # We only care about the NEVRAs, so just accumulate those and return
     return set([f'{name}-{v["evra"]}' for name, v in data['packages'].items()])
@@ -549,7 +561,7 @@ def get_releasever_from_buildroottag(buildroottag: str) -> str:
 # The code in this file is expected to be run through fedora messaging
 # However, you can run the script directly for testing purposes. The
 # below code allows us to do that and also fake feeding data to the
-# call by updating the json text below.
+# call by updating the yaml text below.
 if __name__ == '__main__':
     sh = logging.StreamHandler()
     sh.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
@@ -561,42 +573,23 @@ if __name__ == '__main__':
 
     requests_response = Mock()
     requests_response.text = """
-{
-  "packages": {
-    "GeoIP": {
-      "evra": "1.6.12-5.fc30.x86_64",
-      "digest": "sha256:21dc1220cfdacd089c8c8ed9985801a9d09edb7c26543694cef57ada1d8aafa8"
-    },
-    "GeoIP-GeoLite-data": {
-      "evra": "2018.06-3.fc30.noarch",
-      "digest": "sha256:b871f757d061af1125280219dca15b5066018b6ff20c08010c5774c484f127a8"
-    },
-    "NetworkManager": {
-      "evra": "1:1.16.2-1.fc30.x86_64",
-      "digest": "sha256:4818f336e9496ba919dd8158172d57b77cb65389f4b6c0d2462fea3a29ad9fda"
-    },
-    "NetworkManager-libnm": {
-      "evra": "1:1.16.2-1.fc30.x86_64",
-      "digest": "sha256:f973761517dd7fd2dcfff0aa9578c99e509591a87d0fc316751c0f96e045cbc1"
-    },
-    "acl": {
-      "evra": "2.2.53-3.fc30.x86_64",
-      "digest": "sha256:af5d6641b71ec62d126fa71322a8451aa3de7948202633da802bccd1fd6ece45"
-    },
-    "adcli": {
-      "evra": "0.8.2-3.fc30.x86_64",
-      "digest": "sha256:ff7862e1b1fefe936f3ae614d008835e686ccdc6ec06e7cf445e8f75d73d50f0"
-    },
-    "afterburn": {
-      "evra": "4.1.1-3.module_f30+4804+1c3d5e42.x86_64",
-      "digest": "sha256:71ef65a598f8b0cbeeee0b86f76d345e46ed0af8a1372d09cde99854f1998b4d"
-    },
-    "afterburn-dracut": {
-      "evra": "4.1.1-3.module_f30+4804+1c3d5e42.x86_64",
-      "digest": "sha256:a66b425d7b95c5a87f35ce5abc12c01032726e304db9e284ea859a1003437ce2"
-    }
-  }
-}
+packages:
+  GeoIP:
+    evra: 1.6.12-5.fc30.x86_64
+  GeoIP-GeoLite-data:
+    evra: 2018.06-3.fc30.noarch
+  NetworkManager:
+    evra: 1:1.16.2-1.fc30.x86_64
+  NetworkManager-libnm:
+    evra: 1:1.16.2-1.fc30.x86_64
+  acl:
+    evra: 2.2.53-3.fc30.x86_64
+  adcli:
+    evra: 0.8.2-3.fc30.x86_64
+  afterburn:
+    evra: 4.1.1-3.module_f30+4804+1c3d5e42.x86_64
+  afterburn-dracut:
+    evra: 4.1.1-3.module_f30+4804+1c3d5e42.x86_64
     """
     requests = Mock()
     requests.get.return_value = requests_response
