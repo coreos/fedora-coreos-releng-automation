@@ -304,7 +304,7 @@ class Consumer(object):
                     desiredrpms.update(parse_lockfile_data(r.text))
                 else:
                     # Log any errors we encounter. 404s are ok, but won't hurt to log
-                    logger.warn('URL request error: %s' % r.text.strip())
+                    logger.warning('URL request error: %s' % r.text.strip())
 
         # NOMENCLATURE:
         # 
