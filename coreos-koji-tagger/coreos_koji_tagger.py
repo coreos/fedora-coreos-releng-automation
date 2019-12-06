@@ -398,16 +398,23 @@ class Consumer(object):
                 # races in tag2distrepo. https://pagure.io/koji/issue/1630
                 # Before running distrepo let's wait for all rpms to
                 # pass through signing and make it into the target tag
-                while True:
+                #
+                # If not done in ten minutes then just timeout (60*10s = 10 minutes)
+                for x in range(0, 60):
                     currentbuildids = self.get_tagged_buildids(self.target_tag)
                     difference = desiredbuildids - currentbuildids
                     if difference:
                         logger.info('Waiting on builds to be signed')
                         logger.info('Remaining builds: %s' %
                                         [buildsinfo[x].nvr for x in difference])
-                        time.sleep(5)
+                        time.sleep(10)
                         continue
                     break
+                # If all the builds didn't make it into the target
+                # then just return here.
+                if difference:
+                    logger.error('Some builds never got signed..  Giving up')
+                    return
                 # This code is mostly stolen from:
                 # https://pagure.io/releng/tag2distrepo/blob/master/f/tag2distrepo.py
                 taginfo = self.koji_client.getTag(self.target_tag)
