@@ -57,11 +57,19 @@ repo will need to be set up publish events to fedmsg using
 the script can pick up the event and process it.
 
 The manifest file(s) will need to be updated to contain information
-about RPMs that are available in the staging koji. I just browsed
-through the
-[lists of builds in the koji web UI](https://koji.stg.fedoraproject.org/koji/builds)
-and found a few. You can test with any rpm, not just ones that are
-in FCOS.
+about RPMs that are available in the staging koji. In order to test
+the full process (including signing) we need to use rpms that were
+built in staging koji and not just imported from prod. Here is a
+oneliner you can use to find those rpms:
+
+```
+$ stg-koji list-builds --after '2019-10-01 11:56:41' --volume=DEFAULT --state=COMPLETE --type=rpm | grep fc31
+```
+
+That command will show you rpmbuilds built in staging koji (`--volume=DEFAULT`) 
+that were successful. The `--after` allows you to limit the search so the query
+takes less time. Grepping for `fc31` helps to find rpms for that release.
+You can test with any rpm, not just ones that are in FCOS.
 
 Once you git push you should notice the tagger pick up the event
 and perform some tagging. The RPMs should eventually end up in the
