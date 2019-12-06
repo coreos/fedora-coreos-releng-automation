@@ -570,9 +570,7 @@ if __name__ == '__main__':
     # Mock the web request to get the data so that we can easily
     # modify the below values in order to run a test:
     from unittest.mock import Mock
-
-    requests_response = Mock()
-    requests_response.text = """
+    sample_lockfile = """
 packages:
   GeoIP:
     evra: 1.6.12-5.fc30.x86_64
@@ -591,9 +589,22 @@ packages:
   afterburn-dracut:
     evra: 4.1.1-3.module_f30+4804+1c3d5e42.x86_64
     """
-    requests = Mock()
-    requests.get.return_value = requests_response
 
+    # Make requests.get() return the above sample lockfile
+    # for only one of the requested lockfiles. Otherwise 404
+    def side_effect(*args, **kwargs):
+        requests_response = Mock()
+        if args[0].endswith('lock.x86_64.yaml'):
+            requests_response.ok = True
+            requests_response.text = sample_lockfile
+        else:
+            requests_response.ok = False
+            requests_response.text = "URL request error: 404: Not Found"
+        return requests_response
+    requests.get = Mock(side_effect=side_effect)
+
+    # Note that the following will call process_lockfiles twice. Once
+    # for startup and once for the fake message we're passing.
     m = fedora_messaging.api.Message(
             topic = 'org.fedoraproject.prod.github.push',
             body = EXAMPLE_MESSAGE_BODY)
