@@ -12,6 +12,7 @@ import subprocess
 import sys
 import traceback
 import yaml
+import time
 
 from koji_cli.lib import watch_tasks
 
@@ -392,6 +393,48 @@ class Consumer(object):
                             [task.result for task in tasks],
                             poll_interval=10)
                 logger.info('Tagging done')
+
+                # Subsequently run a distrepo task because there are
+                # races in tag2distrepo. https://pagure.io/koji/issue/1630
+                # Before running distrepo let's wait for all rpms to
+                # pass through signing and make it into the target tag
+                #
+                # If not done in ten minutes then just timeout (60*10s = 10 minutes)
+                for x in range(0, 60):
+                    currentbuildids = self.get_tagged_buildids(self.target_tag)
+                    difference = desiredbuildids - currentbuildids
+                    if difference:
+                        logger.info('Waiting on builds to be signed')
+                        logger.info('Remaining builds: %s' %
+                                        [buildsinfo[x].nvr for x in difference])
+                        time.sleep(10)
+                        continue
+                    break
+                # If all the builds didn't make it into the target
+                # then just return here.
+                if difference:
+                    logger.error('Some builds never got signed..  Giving up')
+                    return
+                # This code is mostly stolen from:
+                # https://pagure.io/releng/tag2distrepo/blob/master/f/tag2distrepo.py
+                taginfo = self.koji_client.getTag(self.target_tag)
+                keys = taginfo['extra'].get("tag2distrepo.keys", '').split()
+                task_opts = {
+                    'arch': taginfo['arches'].split(),
+                    'comp': None,
+                    'delta': [],
+                    'event': None,
+                    'inherit': False,
+                    'latest': False,
+                    'multilib': False,
+                    'split_debuginfo': False,
+                    'skip_missing_signatures': False,
+                    'allow_missing_signatures': False,
+                }
+                task = self.koji_client.distRepo(self.target_tag,
+                                                    keys, **task_opts)
+                watch_tasks(self.koji_client, [task], poll_interval=10)
+                logger.info('Dist-repo task has finished')
 
 
     def get_buildsinfo_from_rpmnevras(self, rpmnevras: set) -> dict:
