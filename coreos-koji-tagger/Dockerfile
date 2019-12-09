@@ -7,8 +7,12 @@ ENV PYTHONUNBUFFERED=true
 # Get any latest updates since last container spin
 RUN dnf update -y && dnf clean all
 
-# Install fedmsg/koji libraries
-RUN dnf -y install dnf-plugins-core fedora-messaging koji krb5-workstation && dnf clean all
+# Install necessary (fedmsg/koji/yaml) libraries
+RUN dnf -y install dnf-plugins-core \
+                   fedora-messaging \
+                   koji             \
+                   python3-pyyaml   \
+                   krb5-workstation && dnf clean all
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
