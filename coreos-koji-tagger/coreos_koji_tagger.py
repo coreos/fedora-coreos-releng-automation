@@ -559,9 +559,6 @@ def get_NVRA_from_NEVRA(string: str) -> str:
     # get a list of hawkey.NEVRA objects that are the possibilities
     nevras  = subject.get_nevra_possibilities(forms=form)
 
-    # get a list of hawkey.NEVRA objects that are the possibilities
-    nevras  = subject.get_nevra_possibilities(forms=form)
-
     # return the first hawkey.NEVRA item in the list of possibilities
     rpminfo = nevras[0]
 
