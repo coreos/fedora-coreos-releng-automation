@@ -322,6 +322,12 @@ class Consumer(object):
                     else:
                         # Log any errors we encounter. 404s are ok, but won't hurt to log
                         logger.warning('URL request error: %s' % r.text.strip())
+        if not desiredrpms:
+            logger.warning('No locked RPMs found!')
+            logger.warning("Does the repo:ref (%s:%s) have any lockfiles?" %
+                            (self.github_repo_fullname, self.github_repo_branch))
+            logger.warning('Continuing...')
+            return
 
         # NOMENCLATURE:
         # 
