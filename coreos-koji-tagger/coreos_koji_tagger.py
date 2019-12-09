@@ -182,6 +182,23 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
 """
 )
 
+def catch_exceptions_and_continue(func):
+    # This is a decorator function that will re-call the decorated
+    # function and will catch any exceptions and not raise them further.
+    # We want to do this because if we raise exceptions it will cause
+    # /usr/bin/fedora-messaging to crash and we'll lose the traceback
+    # logs from the container
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error('Caught Exception!')
+            logger.error('###################################')
+            traceback.print_exc()
+            logger.error('###################################')
+            logger.error('\t continuing...')
+            pass 
+    return wrapper
 
 class BuildInfo(object):
     def __init__(self, buildid, buildrootid):
@@ -246,20 +263,11 @@ class Consumer(object):
         # do an initial run on startup in case we're out of sync
         self.process_lockfiles()
 
-    def __call__(self, message: fedora_messaging.api.Message):
-        # Catch any exceptions and don't raise them further because
-        # it will cause /usr/bin/fedora-messaging to crash and we'll
-        # lose the traceback logs from the container
-        try:
-            self.process_message(message)
-        except Exception as e:
-            logger.error('Caught Exception!')
-            logger.error('###################################')
-            traceback.print_exc()
-            logger.error('###################################')
-            logger.error('\t continuing...')
-            pass
 
+    def __call__(self, message: fedora_messaging.api.Message):
+        self.process_message(message)
+
+    @catch_exceptions_and_continue
     def process_message(self, message: fedora_messaging.api.Message):
         logger.debug(message.topic)
         logger.debug(message.body)
@@ -288,6 +296,7 @@ class Consumer(object):
 
         self.process_lockfiles(commit)
 
+    @catch_exceptions_and_continue
     def process_lockfiles(self, commit=None):
 
         rev = commit or self.github_repo_branch[len("refs/heads/"):]
@@ -304,7 +313,7 @@ class Consumer(object):
                     desiredrpms.update(parse_lockfile_data(r.text))
                 else:
                     # Log any errors we encounter. 404s are ok, but won't hurt to log
-                    logger.warn('URL request error: %s' % r.text.strip())
+                    logger.warning('URL request error: %s' % r.text.strip())
 
         # NOMENCLATURE:
         # 
