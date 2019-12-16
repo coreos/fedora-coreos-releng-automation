@@ -448,8 +448,14 @@ class Consumer(object):
 
     def koji_login(self):
         # If already authenticated then nothing to do
-        if self.koji_client.getLoggedInUser():
-            return
+        # Catch koji.AuthError as that is what happens
+        # when we get logged out.
+        try:
+            if self.koji_client.getLoggedInUser():
+                return
+        except koji.AuthError as e:
+            logger.info('Received koji.AuthError from koji. Re-attempting login.')
+            pass
         # Login!
         principal = find_principal_from_keytab(self.keytab_file)
         self.koji_client.gssapi_login(principal, self.keytab_file)
