@@ -18,16 +18,6 @@ From your local git directory:
 podman build -t coreos-ostree-importer .
 ```
 
-Create a file with aws credentials somewhere:
-
-```                                 
-cat <<'EOF' > /dev/shm/secret
-[default]
-aws_access_key_id=keyid
-aws_secret_access_key=key
-EOF
-```
-
 Create some empty OSTree repos:
 
 ```
@@ -43,8 +33,6 @@ Run the importer:
 ```
 podman run -it --rm                                                \
            -v $PWD/:/pwd/                                          \
-           -v /dev/shm/secret:/.aws/config                         \
-           -e AWS_CONFIG_FILE=/.aws/config                         \
            -v /srv/composerepo/:/mnt/koji/compose/ostree/repo/:z   \
            -v /srv/prodrepo/:/mnt/koji/ostree/repo/:z              \
            coreos-ostree-importer
@@ -98,7 +86,7 @@ body = {
     "build_id": "30.20190905.0",
     "stream": "testing",
     "basearch": "x86_64",
-    "commit": "s3://fcos-builds/prod/streams/testing/builds/30.20190905.0/x86_64/ostree-commit.tar",
+    "commit": "https://fcos-builds/prod/streams/testing/builds/30.20190905.0/x86_64/ostree-commit.tar",
     "checksum": "sha256:d01db6939e7387afa2492ac8e2591c53697fc21cf16785585f7f1ac0de692863",
     "ostree_ref": "fedora/x86_64/coreos/testing",
     "ostree_checksum": "b4beca154dab3696fd04f32ddab818102caa9247ec3192403adb9aaecc991bd9",
