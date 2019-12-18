@@ -29,14 +29,14 @@ FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 # https://github.com/coreos/fedora-coreos-tracker/issues/198#issuecomment-513944390
 EXAMPLE_MESSAGE_BODY = json.loads("""
 {
-    "build_id": "30.20190905.0",
-    "stream": "testing",
+    "build_id": "31.20191217.dev.0",
+    "stream": "bodhi-updates",
     "basearch": "x86_64",
-    "commit": "https://fcos-builds/prod/streams/testing/builds/30.20190905.0/x86_64/ostree-commit.tar",
-    "checksum": "sha256:d01db6939e7387afa2492ac8e2591c53697fc21cf16785585f7f1ac0de692863",
-    "ostree_ref": "fedora/x86_64/coreos/testing",
-    "ostree_checksum": "b4beca154dab3696fd04f32ddab818102caa9247ec3192403adb9aaecc991bd9",
-    "target_repo": "prod"
+    "commit": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
+    "checksum": "sha256:7aadab5768438e4cd36ea1a6cd60da5408ef2d3696293a1f938989a318325390",
+    "ostree_ref": "fedora/x86_64/coreos/bodhi-updates",
+    "ostree_checksum": "4481da720eedfefd3f6ac8925bffd00c4237fd4a09b01c37c6041e4f0e45a3b9",
+    "target_repo": "compose"
 }
 """
 )
