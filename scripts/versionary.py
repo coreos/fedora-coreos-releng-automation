@@ -48,7 +48,7 @@ def main():
     manifest = get_flattened_manifest()
     x, y, z = (get_x(manifest), get_y(manifest), get_z(manifest))
     n = get_next_iteration(x, y, z)
-    new_version = f'{x}.{y}.{z}.{n}'
+    new_version = f'{x}.{y}.{z}-{n}'
 
     # sanity check the new version by trying to re-parse it
     assert parse_version(new_version) is not None
@@ -156,7 +156,7 @@ def get_flattened_manifest():
 
 
 def parse_version(version):
-    m = re.match(r'^([0-9]{2})\.([0-9]{8})\.([0-9]+)\.([0-9]+)$', version)
+    m = re.match(r'^([0-9]{2})\.([0-9]{8})\.([0-9]+)-([0-9]+)$', version)
     if m is None:
         return None
     # sanity-check date
