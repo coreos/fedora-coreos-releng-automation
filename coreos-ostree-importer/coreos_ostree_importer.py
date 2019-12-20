@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-import boto3
-import botocore
 import fedora_messaging
 import fedora_messaging.api
 import hashlib
@@ -13,6 +11,7 @@ import sys
 import tarfile
 import tempfile
 import traceback
+import urllib.request
 
 # Set local logging
 logger = logging.getLogger(__name__)
@@ -30,14 +29,14 @@ FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 # https://github.com/coreos/fedora-coreos-tracker/issues/198#issuecomment-513944390
 EXAMPLE_MESSAGE_BODY = json.loads("""
 {
-    "build_id": "30.20190905.0",
-    "stream": "testing",
+    "build_id": "31.20191217.dev.0",
+    "stream": "bodhi-updates",
     "basearch": "x86_64",
-    "commit": "s3://fcos-builds/prod/streams/testing/builds/30.20190905.0/x86_64/ostree-commit.tar",
-    "checksum": "sha256:d01db6939e7387afa2492ac8e2591c53697fc21cf16785585f7f1ac0de692863",
-    "ostree_ref": "fedora/x86_64/coreos/testing",
-    "ostree_checksum": "b4beca154dab3696fd04f32ddab818102caa9247ec3192403adb9aaecc991bd9",
-    "target_repo": "prod"
+    "commit": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
+    "checksum": "sha256:7aadab5768438e4cd36ea1a6cd60da5408ef2d3696293a1f938989a318325390",
+    "ostree_ref": "fedora/x86_64/coreos/bodhi-updates",
+    "ostree_checksum": "4481da720eedfefd3f6ac8925bffd00c4237fd4a09b01c37c6041e4f0e45a3b9",
+    "target_repo": "compose"
 }
 """
 )
@@ -127,8 +126,8 @@ class Consumer(object):
                 logger.info("Commit exists in compose repo. Importing from there")
                 source_repo_path = KNOWN_OSTREE_REPOS["compose"]
             else:
-                # Grab the file from s3 and then pull local
-                untar_file_from_s3(url=commit_url, tmpdir=tmpdir, sha256sum=sha256sum)
+                # Grab the file from a web url and then pull local
+                untar_file_from_url(url=commit_url, tmpdir=tmpdir, sha256sum=sha256sum)
                 source_repo_path = tmpdir
 
             # one more sanity check: make sure buildid == version
@@ -184,23 +183,13 @@ def get_sha256sum(filepath: str) -> str:
     return h.hexdigest()
 
 
-def parse_s3_url(url: str) -> tuple:
-    if not url.startswith("s3://"):
-        raise Exception(f"Unable to parse the s3 url: {url}")
-    # Chop off s3:// and break into bucket / key
-    bucket, key = url[5:].split("/", 1)
-    return (bucket, key)
-
-
-def untar_file_from_s3(url: str, tmpdir: str, sha256sum: str):
+def untar_file_from_url(url: str, tmpdir: str, sha256sum: str):
     filename = "ostree.tar"
     filepath = os.path.join(tmpdir, filename)
 
-    # Grab file from s3
-    logger.info(f"Downloading object from s3: {url}")
-    s3 = boto3.client("s3")
-    bucket, key = parse_s3_url(url)
-    s3.download_file(bucket, key, filepath)
+    # Grab file from the url
+    logger.info(f"Downloading object from url: {url}")
+    urllib.request.urlretrieve(url, filepath)
 
     # Verify file has correct checksum
     calcuatedsum = get_sha256sum(filepath)
