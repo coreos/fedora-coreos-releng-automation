@@ -79,7 +79,7 @@ for f in files:
         # build the architectures dict
         arch_dict = {"media": {}}
         ensure_dup(input_, arch_dict, "ostree-commit", "commit")
-        generic_arches = ["aws", "qemu", "metal", "openstack", "vmware", "gcp"]
+        generic_arches = ["aliyun", "aws", "azure", "qemu", "metal", "openstack", "vmware", "gcp"]
         for ga in generic_arches:
             if input_.get("images", {}).get(ga, None) is not None:
                 print(f"   - {ga}")
