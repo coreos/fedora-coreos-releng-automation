@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:30
+FROM registry.fedoraproject.org/fedora:31
 
 RUN dnf -y install git python3-toml python3-aiohttp && dnf clean all
 

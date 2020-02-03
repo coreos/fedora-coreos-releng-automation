@@ -327,6 +327,7 @@ class Git:
         self._git_bare.cleanup()
 
     async def __aenter__(self):
+        logging.info("acquiring lock")
         await self._lock.acquire()
         self.cmd('fetch', 'origin', '--prune', '+refs/heads/*:refs/heads/*')
         assert self._git_work is None
@@ -339,13 +340,16 @@ class Git:
         self._git_work = None
         self.cmd('worktree', 'prune')
         self._lock.release()
+        logging.info("releasing lock")
 
     def cmd(self, *args):
         wd = self._git_work or self._git_bare
+        logging.info(f"Running git cmd: {args}")
         subprocess.check_call(['git', *args], cwd=wd.name, env=self._git_env)
 
     def cmd_output(self, *args):
         wd = self._git_work or self._git_bare
+        logging.info(f"Running git cmd: {args}")
         out = subprocess.check_output(['git', *args], cwd=wd.name,
                                       env=self._git_env)
         return out.strip().decode('utf-8')
