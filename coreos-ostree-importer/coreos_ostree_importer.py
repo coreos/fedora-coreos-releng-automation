@@ -73,7 +73,7 @@ class Consumer(object):
             traceback.print_exc()
             logger.error("###################################")
             logger.error("Replying with a FAILURE message...")
-            send_message(msg=message.body, status="FAILURE")
+            send_message(msg=message.body, status="FAILURE", failure_message=str(e))
             logger.error("\t continuing...")
             pass
 
@@ -159,13 +159,15 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     return cp  # subprocess.CompletedProcess
 
 
-def send_message(msg: dict, status: str):
+def send_message(msg: dict, status: str, failure_message: str = ""):
     # Send back a message with all the original message body
-    # along with an additional `status:` header with either
-    # `SUCCESS` or `FAILURE`.
+    # along with additional `status:` and `failure-message` headers.
+    body = {"status": status, **msg}
+    if failure_message:
+        body["failure-message"] = failure_message
     fedora_messaging.api.publish(
         fedora_messaging.message.Message(
-            topic=FEDORA_MESSAGING_TOPIC_RESPOND, body={"status": status, **msg}
+            topic=FEDORA_MESSAGING_TOPIC_RESPOND, body=body
         )
     )
 
