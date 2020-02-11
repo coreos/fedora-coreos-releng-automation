@@ -27,7 +27,8 @@ FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import&delta=100000
 # The schema was originally designed in:
 # https://github.com/coreos/fedora-coreos-tracker/issues/198#issuecomment-513944390
-EXAMPLE_MESSAGE_BODY = json.loads("""
+EXAMPLE_MESSAGE_BODY = json.loads(
+    """
 {
     "build_id": "31.20191217.dev.0",
     "stream": "bodhi-updates",
@@ -45,6 +46,7 @@ KNOWN_OSTREE_REPOS = {
     "prod": "/mnt/koji/ostree/repo",
     "compose": "/mnt/koji/compose/ostree/repo",
 }
+
 
 class Consumer(object):
     def __init__(self):
