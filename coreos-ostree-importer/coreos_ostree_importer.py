@@ -46,8 +46,6 @@ KNOWN_OSTREE_REPOS = {
     "compose": "/mnt/koji/compose/ostree/repo",
 }
 
-# Given a repo (and thus an input JSON) analyze existing koji tag set
-# and tag in any missing packages
 class Consumer(object):
     def __init__(self):
         # Check the possible repos to make sure they exist
