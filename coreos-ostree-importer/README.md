@@ -56,8 +56,6 @@ The rough steps for setting up a server are:
 
 Optional - to see a web browser view:
 
-- `sudo sed -i -e 's|@RABBITMQ_USER@|rabbitmq|' -e 's|@RABBITMQ_GROUP@|rabbitmq|' /usr/sbin/rabbitmq-plugins`
-    - https://bugzilla.redhat.com/show_bug.cgi?id=1755152
 - `sudo rabbitmq-plugins enable rabbitmq_management`
 - Navigate to `<IP_OF_HOST>:15672` in a web browser and log in with `guest`/`guest`. 
 - Navigate to `Queues` tab to view existing queues/messages.
