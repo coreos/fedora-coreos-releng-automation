@@ -86,7 +86,7 @@ class Consumer(object):
         basearch = msg["basearch"]
         build_id = msg["build_id"]
         checksum = msg["checksum"]
-        commit_url = msg["commit"]
+        commit_url = msg["commit_url"]
         ostree_checksum = msg["ostree_checksum"]
         ostree_ref = msg["ostree_ref"]
         stream = msg["stream"]
