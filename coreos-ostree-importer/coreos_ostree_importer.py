@@ -89,7 +89,6 @@ class Consumer(object):
         commit_url = msg["commit_url"]
         ostree_checksum = msg["ostree_checksum"]
         ostree_ref = msg["ostree_ref"]
-        stream = msg["stream"]
         target_repo = msg["target_repo"]
 
         # Qualify arguments
@@ -101,6 +100,11 @@ class Consumer(object):
         sha256sum = checksum[7:]
         target_repo_path = KNOWN_OSTREE_REPOS[target_repo]
         source_repo_path = None
+
+        logger.info(
+            f"Processing request to import {build_id} into the "
+            f"{ostree_ref} branch of the {target_repo} repo."
+        )
 
         # Detect if the commit already exists in the target repo
         # NOTE: We assume here that an import won't be requested twice for
