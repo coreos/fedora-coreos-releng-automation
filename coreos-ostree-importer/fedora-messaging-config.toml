@@ -1,5 +1,5 @@
 # This file is in the TOML format.
-amqp_url = "amqps://coreos:@rabbitmq.fedoraproject.org/%2Fpubsub"
+amqp_url = "amqps://coreos-ostree-importer:@rabbitmq.fedoraproject.org/%2Fpubsub"
 callback = "fedora_messaging.example:printer"
 
 # pick up the key/cert from the same directory as the messaging config
@@ -21,7 +21,7 @@ auto_delete = false
 arguments = {}
 
 # We'll use the coreos queue name
-[queues.coreos]
+[queues.coreos-ostree-importer]
 durable = true
 auto_delete = false
 exclusive = true
@@ -29,7 +29,7 @@ arguments = {}
 
 # We care about the ostree-import message topic
 [[bindings]]
-queue = "coreos"
+queue = "coreos-ostree-importer"
 exchange = "amq.topic"
 routing_keys = ["org.fedoraproject.prod.coreos.build.request.ostree-import"]
 

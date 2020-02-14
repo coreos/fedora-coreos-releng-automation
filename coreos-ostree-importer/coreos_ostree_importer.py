@@ -27,7 +27,8 @@ FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import&delta=100000
 # The schema was originally designed in:
 # https://github.com/coreos/fedora-coreos-tracker/issues/198#issuecomment-513944390
-EXAMPLE_MESSAGE_BODY = json.loads("""
+EXAMPLE_MESSAGE_BODY = json.loads(
+    """
 {
     "build_id": "31.20191217.dev.0",
     "stream": "bodhi-updates",
@@ -46,8 +47,7 @@ KNOWN_OSTREE_REPOS = {
     "compose": "/mnt/koji/compose/ostree/repo",
 }
 
-# Given a repo (and thus an input JSON) analyze existing koji tag set
-# and tag in any missing packages
+
 class Consumer(object):
     def __init__(self):
         # Check the possible repos to make sure they exist
@@ -73,7 +73,7 @@ class Consumer(object):
             traceback.print_exc()
             logger.error("###################################")
             logger.error("Replying with a FAILURE message...")
-            send_message(msg=message.body, status="FAILURE")
+            send_message(msg=message.body, status="FAILURE", failure_message=str(e))
             logger.error("\t continuing...")
             pass
 
@@ -86,10 +86,9 @@ class Consumer(object):
         basearch = msg["basearch"]
         build_id = msg["build_id"]
         checksum = msg["checksum"]
-        commit_url = msg["commit"]
+        commit_url = msg["commit_url"]
         ostree_checksum = msg["ostree_checksum"]
         ostree_ref = msg["ostree_ref"]
-        stream = msg["stream"]
         target_repo = msg["target_repo"]
 
         # Qualify arguments
@@ -101,6 +100,11 @@ class Consumer(object):
         sha256sum = checksum[7:]
         target_repo_path = KNOWN_OSTREE_REPOS[target_repo]
         source_repo_path = None
+
+        logger.info(
+            f"Processing request to import {build_id} into the "
+            f"{ostree_ref} branch of the {target_repo} repo."
+        )
 
         # Detect if the commit already exists in the target repo
         # NOTE: We assume here that an import won't be requested twice for
@@ -159,13 +163,15 @@ def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     return cp  # subprocess.CompletedProcess
 
 
-def send_message(msg: dict, status: str):
+def send_message(msg: dict, status: str, failure_message: str = ""):
     # Send back a message with all the original message body
-    # along with an additional `status:` header with either
-    # `SUCCESS` or `FAILURE`.
+    # along with additional `status:` and `failure-message` headers.
+    body = {"status": status, **msg}
+    if failure_message:
+        body["failure-message"] = failure_message
     fedora_messaging.api.publish(
         fedora_messaging.message.Message(
-            topic=FEDORA_MESSAGING_TOPIC_RESPOND, body={"status": status, **msg}
+            topic=FEDORA_MESSAGING_TOPIC_RESPOND, body=body
         )
     )
 

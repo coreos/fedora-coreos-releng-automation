@@ -56,8 +56,6 @@ The rough steps for setting up a server are:
 
 Optional - to see a web browser view:
 
-- `sudo sed -i -e 's|@RABBITMQ_USER@|rabbitmq|' -e 's|@RABBITMQ_GROUP@|rabbitmq|' /usr/sbin/rabbitmq-plugins`
-    - https://bugzilla.redhat.com/show_bug.cgi?id=1755152
 - `sudo rabbitmq-plugins enable rabbitmq_management`
 - Navigate to `<IP_OF_HOST>:15672` in a web browser and log in with `guest`/`guest`. 
 - Navigate to `Queues` tab to view existing queues/messages.
@@ -86,7 +84,7 @@ body = {
     "build_id": "31.20191217.dev.0",
     "stream": "bodhi-updates",
     "basearch": "x86_64",
-    "commit": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
+    "commit_url": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
     "checksum": "sha256:7aadab5768438e4cd36ea1a6cd60da5408ef2d3696293a1f938989a318325390",
     "ostree_ref": "fedora/x86_64/coreos/bodhi-updates",
     "ostree_checksum": "4481da720eedfefd3f6ac8925bffd00c4237fd4a09b01c37c6041e4f0e45a3b9",
@@ -100,4 +98,25 @@ You'll have to update the body with new information you'd like to use. Then run:
 
 ```
 ./publisher.py
+```
+
+## Fedora Messaging sender from the Fedora CoreOS Pipeline
+
+Included in this directory is a file (`send-ostree-import-request.py`)
+that is not used by the `coreos-ostree-importer`
+at all. It is used by the
+[Fedora CoreOS Pipeline](https://github.com/coreos/fedora-coreos-pipeline.git)
+to send the request to the importer. It made sense to co-locate the
+requester and importer in the same code repo/directory.
+
+Here's how you might send a request using `fcos-pipeline-ostree-import-request.py`: 
+
+
+```
+cosa buildprep --build=31.20200212.20.0 s3://fcos-builds/prod/streams/testing-devel/builds
+/usr/lib/coreos-assembler/send-ostree-import-request.py \
+        --fedmsg-conf /srv/fedora-messaging-config.toml \
+        --build 31.20200212.20.0 --stg \
+        --s3 fcos-builds/prod/streams/testing-devel \
+        --repo compose
 ```
