@@ -11,7 +11,8 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Pick up libraries we use that are delivered along with COSA
+sys.path.insert(0, '/usr/lib/coreos-assembler')
 from cosalib.meta import GenericBuildMeta
 from cosalib.fedora_messaging_request import send_message
 
