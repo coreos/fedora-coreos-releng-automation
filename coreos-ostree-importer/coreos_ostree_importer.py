@@ -17,9 +17,10 @@ import urllib.request
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-FEDORA_MESSAGING_TOPIC_LISTEN = (
-    "org.fedoraproject.prod.coreos.build.request.ostree-import"
-)
+# This should be one of:
+#   - org.fedoraproject.prod.coreos.build.request.ostree-import
+#   - org.fedoraproject.stg.coreos.build.request.ostree-import
+FEDORA_MESSAGING_TOPIC_LISTEN = fedora_messaging.config.conf.get("bindings")[0]["routing_keys"][0]
 FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 
 
@@ -33,7 +34,7 @@ EXAMPLE_MESSAGE_BODY = json.loads(
     "build_id": "31.20191217.dev.0",
     "stream": "bodhi-updates",
     "basearch": "x86_64",
-    "commit": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
+    "commit_url": "https://builds.coreos.fedoraproject.org/prod/streams/bodhi-updates/builds/31.20191217.dev.0/x86_64/fedora-coreos-31.20191217.dev.0-ostree.x86_64.tar",
     "checksum": "sha256:7aadab5768438e4cd36ea1a6cd60da5408ef2d3696293a1f938989a318325390",
     "ostree_ref": "fedora/x86_64/coreos/bodhi-updates",
     "ostree_checksum": "4481da720eedfefd3f6ac8925bffd00c4237fd4a09b01c37c6041e4f0e45a3b9",
@@ -288,7 +289,7 @@ if __name__ == "__main__":
     logger.addHandler(sh)
 
     m = fedora_messaging.api.Message(
-        topic="org.fedoraproject.prod.coreos.build.request.ostree-import",
+        topic=FEDORA_MESSAGING_TOPIC_LISTEN,
         body=EXAMPLE_MESSAGE_BODY,
     )
     c = Consumer()
