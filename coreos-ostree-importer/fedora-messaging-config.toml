@@ -1,4 +1,10 @@
-# This file is in the TOML format.
+# This config is meant to be used for local testing of CoreOS OSTree
+# Importer. The real config that will be used is over in Fedora's
+# Ansible repo [1]. In order to test this with a local setup you'll
+# need to change the amqp url to something like: `amqp_url = "amqp://192.168.121.2"`
+#
+# [1] https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-ostree-importer/templates/fedora-messaging.toml#n23
+
 amqp_url = "amqps://coreos-ostree-importer:@rabbitmq.fedoraproject.org/%2Fpubsub"
 callback = "fedora_messaging.example:printer"
 
