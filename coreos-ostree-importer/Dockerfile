@@ -5,10 +5,10 @@ FROM registry.fedoraproject.org/fedora:31
 ENV PYTHONUNBUFFERED=true
 
 # Get any latest updates since last container spin
-RUN dnf update -y && dnf clean all
+RUN dnf update -y
 
 # Install boto/fedmsg/ostree libraries
-RUN dnf -y install fedora-messaging ostree && dnf clean all
+RUN dnf -y install fedora-messaging ostree
 
 # Put the file into a location that can be imported
 ADD coreos_ostree_importer.py /usr/lib/python3.7/site-packages/

@@ -5,19 +5,19 @@ FROM registry.fedoraproject.org/fedora:31
 ENV PYTHONUNBUFFERED=true
 
 # Get any latest updates since last container spin
-RUN dnf update -y && dnf clean all
+RUN dnf update -y
 
 # Install necessary (fedmsg/koji/yaml) libraries
 RUN dnf -y install dnf-plugins-core \
                    fedora-messaging \
                    koji             \
                    python3-pyyaml   \
-                   krb5-workstation && dnf clean all
+                   krb5-workstation
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
 # we aren't building anything.
-RUN dnf download fedora-packager && rpm -ivh --nodeps fedora-packager*rpm && rm fedora-packager*rpm && dnf clean all
+RUN dnf download fedora-packager && rpm -ivh --nodeps fedora-packager*rpm && rm fedora-packager*rpm
 
 RUN mkdir /work
 WORKDIR /work
