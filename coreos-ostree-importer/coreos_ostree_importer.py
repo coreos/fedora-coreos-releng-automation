@@ -209,12 +209,23 @@ def untar_file_from_url(url: str, tmpdir: str, sha256sum: str):
 
 
 def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
+    branch_exists = ostree_branch_exists(repo=dstrepo, branch=branch)
+    has_parent_commit = ostree_has_parent_commit(repo=srcrepo, commit=commit)
+
+    # If we're making a new branch let's make sure it's the first commit (i.e.
+    # has no parent). There could be cases where we actually want to do this
+    # but let's do it manually in releng to make sure it's what we actually
+    # want to do.
+    if has_parent_commit and not branch_exists:
+        raise Exception("Refusing to import non-origin commit into a new branch")
+
+    # If we have a parent commit and the branch is already in the repo then
     # verify the parent commit of the new commit is in the destination repo
     # and also that the current branch in the repo points to it
-    branch_exists = ostree_branch_exists(repo=dstrepo, branch=branch)
-    parent = ostree_get_parent_commit(repo=srcrepo, commit=commit)
-    if branch_exists:
+    if has_parent_commit and branch_exists:
+        parent = ostree_get_parent_commit(repo=srcrepo, commit=commit)
         assert_branch_points_to_commit(repo=dstrepo, branch=branch, commit=parent)
+
     # pull content
     logger.info("Running ostree pull-local to perform import")
     cmd = ["ostree", f"--repo={dstrepo}", "pull-local", srcrepo, commit]
@@ -251,6 +262,9 @@ def ostree_branch_exists(repo: str, branch: str) -> bool:
     cmd = ["ostree", f"--repo={repo}", "rev-parse", branch]
     return runcmd(cmd, check=False).returncode == 0
 
+def ostree_has_parent_commit(repo: str, commit: str) -> str:
+    cmd = ["ostree", f"--repo={repo}", "rev-parse", f"{commit}^"]
+    return runcmd(cmd, check=False).returncode == 0
 
 def ostree_get_parent_commit(repo: str, commit: str) -> str:
     cmd = ["ostree", f"--repo={repo}", "rev-parse", f"{commit}^"]
