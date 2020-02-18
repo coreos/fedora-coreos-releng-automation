@@ -22,6 +22,10 @@ from cosalib.fedora_messaging_request import send_request_and_wait_for_response
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import.finished&delta=100000
 # https://apps.stg.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.stg.coreos.build.request.ostree-import.finished&delta=100000
 
+# Since downloading the ostree tarball can take some time let's give
+# it 10 minutes to do the job.
+IMPORT_REQUEST_TIMEOUT = 60*10
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -67,6 +71,7 @@ def send_ostree_import_request(args):
         request_type="ostree-import",
         config=args.fedmsg_conf,
         environment=environment,
+        request_timeout=IMPORT_REQUEST_TIMEOUT,
         body={
             "build_id": buildid,
             "basearch": basearch,
