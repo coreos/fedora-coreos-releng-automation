@@ -14,7 +14,7 @@ import sys
 # Pick up libraries we use that are delivered along with COSA
 sys.path.insert(0, '/usr/lib/coreos-assembler')
 from cosalib.meta import GenericBuildMeta
-from cosalib.fedora_messaging_request import send_message
+from cosalib.fedora_messaging_request import send_request_and_wait_for_response
 
 # Example datagrepper URLs to inspect sent messages:
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import&delta=100000
@@ -63,8 +63,7 @@ def send_ostree_import_request(args):
     # Example: https://fcos-builds.s3.amazonaws.com/prod/streams/stable/builds/31.20200127.3.0/x86_64/fedora-coreos-31.20200127.3.0-ostree.x86_64.tar
     commit_url = f"https://{bucket}.s3.amazonaws.com/{prefix}/builds/{buildid}/{basearch}/{build['images']['ostree']['path']}"
 
-    # response = send_request_and_wait_for_response(
-    send_message(
+    response = send_request_and_wait_for_response(
         request_type="ostree-import",
         config=args.fedmsg_conf,
         environment=environment,
@@ -78,7 +77,7 @@ def send_ostree_import_request(args):
             "target_repo": args.repo,
         },
     )
-    # validate_response(response)
+    validate_response(response)
 
 
 def get_bucket_and_prefix(path):
