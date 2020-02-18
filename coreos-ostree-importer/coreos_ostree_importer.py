@@ -17,9 +17,10 @@ import urllib.request
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-FEDORA_MESSAGING_TOPIC_LISTEN = (
-    "org.fedoraproject.prod.coreos.build.request.ostree-import"
-)
+# This should be one of:
+#   - org.fedoraproject.prod.coreos.build.request.ostree-import
+#   - org.fedoraproject.stg.coreos.build.request.ostree-import
+FEDORA_MESSAGING_TOPIC_LISTEN = fedora_messaging.config.conf.get("bindings")[0]["routing_keys"][0]
 FEDORA_MESSAGING_TOPIC_RESPOND = FEDORA_MESSAGING_TOPIC_LISTEN + ".finished"
 
 
@@ -288,7 +289,7 @@ if __name__ == "__main__":
     logger.addHandler(sh)
 
     m = fedora_messaging.api.Message(
-        topic="org.fedoraproject.prod.coreos.build.request.ostree-import",
+        topic=FEDORA_MESSAGING_TOPIC_LISTEN,
         body=EXAMPLE_MESSAGE_BODY,
     )
     c = Consumer()
