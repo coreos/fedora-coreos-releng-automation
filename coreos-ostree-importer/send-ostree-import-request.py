@@ -95,8 +95,8 @@ def get_bucket_and_prefix(path):
 def validate_response(response):
     if response["status"].lower() == "failure":
         if "failure-message" not in response:
-            raise Exception("Signing failed")
-        raise Exception(f"Signing failed: {response['failure-message']}")
+            raise Exception("Importing failed")
+        raise Exception(f"Importing failed: {response['failure-message']}")
     assert response["status"].lower() == "success", str(response)
 
 
