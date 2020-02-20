@@ -7,8 +7,12 @@ ENV PYTHONUNBUFFERED=true
 # Get any latest updates since last container spin
 RUN dnf update -y
 
-# Install boto/fedmsg/ostree libraries
-RUN dnf -y install fedora-messaging ostree
+# Install needed rpms
+# Grab ostree from koji for now for https://github.com/ostreedev/ostree/pull/1984
+RUN dnf -y install \
+        fedora-messaging \
+        https://kojipkgs.fedoraproject.org//packages/ostree/2020.1/2.fc31/x86_64/ostree-2020.1-2.fc31.x86_64.rpm \
+        https://kojipkgs.fedoraproject.org//packages/ostree/2020.1/2.fc31/x86_64/ostree-libs-2020.1-2.fc31.x86_64.rpm
 
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
