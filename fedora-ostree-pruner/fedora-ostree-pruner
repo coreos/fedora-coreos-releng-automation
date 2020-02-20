@@ -1,0 +1,281 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+#
+# fedora-ostree-pruner - A utility to prune our Fedora ostree repos.
+#
+# Copyright (C) 2022 Red Hat, Inc.
+# SPDX-License-Identifier:      GPL-2.0+
+#
+# Authors:
+#     Dusty Mabe <dusty@dustymabe.com>
+
+import argparse
+import datetime
+import logging
+import os
+import pprint
+import subprocess
+import time
+
+
+logformat = "%(asctime)s %(levelname)s %(name)s - %(message)s"
+logging.basicConfig(level=logging.INFO, format=logformat)
+logger = logging.getLogger('fedora-ostree-pruner')
+
+# The location of our two unified ostree repos
+OSTREECOMPOSEREPO = '/mnt/koji/compose/ostree/repo'
+OSTREEPRODREPO = '/mnt/koji/ostree/repo'
+OSTREECOMPOSEREPO = '/mnt/fedora_koji_prod/koji/compose/ostree/repo'
+OSTREEPRODREPO = '/mnt/fedora_koji_prod/koji/ostree/repo'
+
+FEDORA_STABLE_LIST = [35, 36, 37]
+FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34]
+
+ATOMIC_HOST_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
+SILVERBLUE_ARCHES = ['x86_64', 'aarch64', 'ppc64le']  # Applies to Kinoite
+FEDORA_COREOS_ARCHES = ['x86_64', 'aarch64']
+
+# https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md#introduction
+FEDORA_COREOS_PRODUCTION_STREAMS = ['next', 'testing', 'stable']
+
+# The amount of time to retain commits in the compose repo for each branch
+COMPOSE_REPO_POLICY = 'time:90'
+
+# The policy for each ref in the prod repo. The following specifications are supported:
+#   - delete       -> Delete the ref from the repo.
+#   - None         -> No prune policy, don't prune anything.
+#   - time:$time   -> Amount of time (in days) to keep content
+#   - depth:$depth -> Depth of commit history to keep
+PROD_REF_POLICIES = dict()
+for arch in SILVERBLUE_ARCHES:
+    # Keep only the last 180 days of rawhide Silverblue/Kinoite
+    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/silverblue']  = 'time:180'
+    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/kinoite']     = 'time:180'
+    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/workstation'] = 'delete'
+    # For Silverblue/Kinoite stable keep all stable/updates (they are aliased).
+    # For testing, keep just the last 90 days.
+    for release in FEDORA_STABLE_LIST:
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/silverblue']         = None
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/silverblue'] = None
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/silverblue'] = 'time:90'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/kinoite']         = None
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/kinoite'] = None
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/kinoite'] = 'time:90'
+    # For EOL Silverblue/Kinoite since the updates ref and stable ref are aliased
+    # we'll specify depth of 1 for both of those.
+    for release in FEDORA_EOL_LIST:
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/silverblue']         = 'depth:0'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/silverblue'] = 'depth:0'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/silverblue'] = 'delete'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/kinoite']         = 'depth:0'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/kinoite'] = 'depth:0'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/kinoite'] = 'delete'
+    # Delete any references to Atomic Workstation
+    for release in FEDORA_EOL_LIST:
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/workstation'] = 'delete'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/workstation'] = 'delete'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/workstation'] = 'delete'
+for arch in ATOMIC_HOST_ARCHES:
+    # Delete all atomic host rawhide
+    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/atomic-host'] = 'delete'
+    # For EOL ATOMIC HOST we keep only the last commit on the stable ref
+    for release in FEDORA_EOL_LIST:
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/atomic-host']         = 'depth:0'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/atomic-host'] = 'delete'
+        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/atomic-host'] = 'delete'
+for arch in FEDORA_COREOS_ARCHES:
+    # For production Fedora CoreOS Streams we don't prune anything right now
+    for stream in FEDORA_COREOS_PRODUCTION_STREAMS:
+        PROD_REF_POLICIES[f'fedora/{arch}/coreos/{stream}'] = None
+
+
+# Beneath this is code, no config needed here
+def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
+    # Default to not capture output, check=True, shell=False
+    if 'capture_output' not in kwargs:
+        kwargs['capture_output'] = False
+    if 'check' not in kwargs:
+        kwargs['check'] = True
+    if 'shell' not in kwargs:
+        kwargs['shell'] = False
+    try:
+        logger.info(f'Running command: {cmd}')
+        cp = subprocess.run(cmd, **kwargs)
+    except subprocess.CalledProcessError as e:
+        logger.error(f'Running command returned bad exitcode: {e.returncode}')
+        logger.error(f'COMMAND: {cmd}')
+        if kwargs['capture_output']:
+            logger.error(f' STDOUT: {e.stdout}')
+            logger.error(f' STDERR: {e.stderr}')
+        raise e
+    return cp  # subprocess.CompletedProcess
+
+
+def pruning_policy_to_args(policy: str):
+    # parse the given policy statement and return the command
+    # that should be run
+    if policy.startswith('depth:'):
+        number = policy[6:]
+        return f'--depth={number}'
+    if policy.startswith('time:'):
+        number = policy[5:]
+        return f'--keep-younger-than={number} days ago'
+    assert False, f"Invalid policy string '{policy}'"
+
+
+def delete_ref_in_repo(ref: str, repo: str, test: bool):
+    logger.info(f'Deleting the {ref} ref in repo {repo}.')
+    if test:
+        logger.info('Skipping delete because of test mode')
+        return
+
+    # Grab the commit hash from the ref
+    cmd = ['ostree', 'rev-parse', '--repo', repo, ref]
+    cp = runcmd(cmd)
+    commit = cp.stdout.decode('utf-8').strip()
+
+    # Prune all but the last commit 
+    cmd = ['ostree', 'prune', '--repo', repo,
+           '--only-branch', ref, '--refs-only', 
+           '--depth=0']
+    runcmd(cmd, capture_output=False)
+
+    # Delete the ref
+    cmd = ['ostree', 'refs', '--repo', repo, '--delete', ref]
+    runcmd(cmd)
+
+    # Update the summary file since we deleted a ref
+    cmd = ['ostree', 'summary', '--repo', repo, '-u']
+    runcmd(cmd)
+
+    # Prune the last commit
+    cmd = ['ostree', 'prune', '--repo', repo, f'--delete-commit={commit}']
+    runcmd(cmd, capture_output=False)
+
+
+def prune_compose_repo(test=False):
+    # prune the compose repo
+    logger.info(f'Pruning the compose repo {OSTREECOMPOSEREPO}'
+                f' with policy {COMPOSE_REPO_POLICY}')
+    prunearg = pruning_policy_to_args(COMPOSE_REPO_POLICY)
+    cmd = ['ostree', 'prune', '--repo', OSTREECOMPOSEREPO,
+           '--refs-only', prunearg]
+    if test:
+        cmd.append('--no-prune')
+    runcmd(cmd)
+
+
+def prune_prod_repo(test=False):
+    # Error out if any refs exist that aren't defined in the policy
+    cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO]
+    cp = runcmd(cmd, capture_output=True)
+    prod_refs = cp.stdout.decode('utf-8').splitlines()
+    for ref in prod_refs:
+        if ref not in PROD_REF_POLICIES:
+            msg = f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined'
+            logger.error(msg)
+            raise Exception(msg)
+
+    # Warn up front for refs that are in the policy but not in the repo
+    for ref, policy in PROD_REF_POLICIES.items():
+        if ref not in prod_refs:
+            if policy != 'delete':
+                logger.warning('Policy defined for a ref that is not in the'
+                               f' repo {OSTREEPRODREPO}: {ref}')
+            continue
+
+    # prune each branch in the policy with specified value
+    for ref,policy in PROD_REF_POLICIES.items():
+
+        # Skip if there is no ref in the repo for this policy
+        if ref not in prod_refs:
+            continue
+
+        if policy is None:
+            logger.info(f'Skipping ref {ref} in repo {OSTREEPRODREPO}.'
+                        'Policy is to keep all commits.')
+            continue
+
+        if policy == 'delete':
+            delete_ref_in_repo(ref, OSTREEPRODREPO, test)
+            continue
+
+        prunearg = pruning_policy_to_args(policy)
+
+        logger.info(f'Pruning the {ref} ref in repo {OSTREEPRODREPO} to {policy}')
+        cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO,
+               '--only-branch', ref, '--refs-only', prunearg]
+        if test:
+            cmd.append('--no-prune')
+        runcmd(cmd)
+
+# XXX this function should not be used yet as there are a few
+# bugs to work out: 
+# https://github.com/ostreedev/ostree/issues/1479 
+# https://github.com/ostreedev/ostree/issues/1481
+def prune_prod_repo_deltas(test=False):
+
+    logger.info("prune_prod_repo_deltas: this function is disabled until the"
+                "following bugs are fixed:")
+    logger.info("https://github.com/ostreedev/ostree/issues/1479")
+    logger.info("https://github.com/ostreedev/ostree/issues/1481")
+    return
+
+    cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO,
+           '--refs-only', '--static-deltas-only']
+    if test:
+        cmd.append('--no-prune')
+    runcmd(cmd, capture_output=False)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test",
+                        help="Don't actually prune", action='store_true')
+    parser.add_argument("--loop",
+                        help="Loop forever, run once a week.", action='store_true')
+    args = parser.parse_args()
+
+    # set args.test = True for now. Once we have proved
+    # everything out in prod and the logs look good we'll
+    # delete this code.
+    args.test = True
+
+    # on startup let's print out the config that was generated
+    logger.info('The configured policy is: \n%s' %
+                pprint.pformat(PROD_REF_POLICIES, indent=8))
+
+    # Configure a umask of 0002 which will allow for the group permissions
+    # to include write for newly created files. We need this because we'd
+    # like to access the OSTree repos from two different Kubernetes pods,
+    # which will have different UIDs but the same GID.
+    # See https://pagure.io/releng/issue/8811#comment-616490
+    os.umask(0o0002)
+
+    # Prune the compose and the prod repo based on policy
+    prune_compose_repo(args.test)
+    prune_prod_repo(args.test)
+
+    # If we were asked to run in a loop, then run once a week on
+    # Saturday.
+    days = "Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split()
+    if args.loop:
+        while True:
+            time.sleep(60*60*24)  # 24h
+            # If it's Saturday, run the prune
+            day = days[datetime.date.today().weekday()]
+            if day == 'Saturday':
+                prune_compose_repo(args.test)
+                prune_prod_repo(args.test)
+            else:
+                logger.info(f"Today is {day}. Sleeping...")
+
+
+    # XXX this function should not be used yet as there are a few
+    # bugs to work out: 
+    # https://github.com/ostreedev/ostree/issues/1479 
+    # https://github.com/ostreedev/ostree/issues/1481
+    #prune_prod_repo_deltas(args.test)
+
+if __name__ == '__main__':
+    main()
