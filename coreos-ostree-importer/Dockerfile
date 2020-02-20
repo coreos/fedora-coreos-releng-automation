@@ -1,7 +1,7 @@
 FROM registry.fedoraproject.org/fedora:31
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
-# periods with no newline get printed immediately to the screen
+# output immediately comes to the console
 ENV PYTHONUNBUFFERED=true
 
 # Get any latest updates since last container spin
