@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+
+# This is a wrapper script that simply sets the appropriate umask and
+# then execs fedora-messaging to start the coreos-ostree-importer
+
+set -e
+
+# Configure a umask of 0002 which will allow for the group permissions
+# to include write for newly created files. We need this because we'd
+# like to access the OSTree repos from two different Kubernetes pods,
+# which will have different UIDs but the same GID.
+# See: https://pagure.io/releng/issue/8811#comment-616490
+umask 0002
+
+# exec to call fedora-messaging CLI and tell it to use the Consumer
+exec fedora-messaging consume --callback=coreos_ostree_importer:Consumer

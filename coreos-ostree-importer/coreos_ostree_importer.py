@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import stat
 import subprocess
 import sys
 import tarfile
@@ -48,13 +49,19 @@ KNOWN_OSTREE_REPOS = {
     "compose": "/mnt/koji/compose/ostree/repo",
 }
 
-
 class Consumer(object):
     def __init__(self):
-        # Check the possible repos to make sure they exist
+        # Do sanity checks on the repos
         for path in KNOWN_OSTREE_REPOS.values():
+
+            # Check the repo to make sure it exists
             if not ostree_repo_exists(path):
                 raise Exception(f"OSTree repo does not exist at {path}")
+
+            # Sanity check the repo to make sure all directories in the repo
+            # have the appropriate permissions (most importantly group writable).
+            # See https://pagure.io/releng/issue/8811#comment-616490
+            assert_dirs_permissions(path)
 
         logger.info(
             "Processing messages with topic: %s" % FEDORA_MESSAGING_TOPIC_LISTEN
@@ -102,6 +109,11 @@ class Consumer(object):
         target_repo_path = KNOWN_OSTREE_REPOS[target_repo]
         source_repo_path = None
 
+        # Sanity check the repo to make sure all directories in the repo
+        # have the appropriate permissions (most importantly group writable).
+        # See https://pagure.io/releng/issue/8811#comment-616490
+        assert_dirs_permissions(target_repo_path)
+
         logger.info(
             f"Processing request to import {build_id} into the "
             f"{ostree_ref} branch of the {target_repo} repo."
@@ -146,6 +158,18 @@ class Consumer(object):
                 srcrepo=source_repo_path,
                 branch=ostree_ref,
             )
+
+
+def assert_dirs_permissions(path: str):
+    founderror = False
+    for root, dirs, files in os.walk(path):
+        statinfo = os.stat(root)
+        # Verifies group permissions are 0bXXX111XXX (---rwx---)
+        if ((statinfo.st_mode & stat.S_IRWXG) != stat.S_IRWXG):
+            logger.warning(f"Directory {root} does not have rwx group permissions!")
+            founderror = True
+    if founderror:
+        raise Exception(f"Found directories that did not have rwx group permissions")
 
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
