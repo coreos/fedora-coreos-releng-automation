@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import requests
 import stat
 import subprocess
 import sys
@@ -326,9 +327,26 @@ if __name__ == "__main__":
     )
     logger.addHandler(sh)
 
+    # Allow a user to pass in a url to a datagrepper page and we'll
+    # parse that and pass it into the Consumer.
+    if len(sys.argv) == 1:
+        # no args, just use example message body
+        body = EXAMPLE_MESSAGE_BODY
+    else:
+        # User passed in a url like:
+        # https://apps.fedoraproject.org/datagrepper/id?id=2020-32c268dc-36ba-4cef-be6a-f4969a0c83af&is_raw=true&size=extra-large
+        url = sys.argv[1]
+        logger.info(f'Attempting to retrieve data from {url}')
+        r = requests.get(url)
+        data = json.loads(r.text)
+        logger.debug('Retrieved JSON data:')
+        logger.debug(json.dumps(data, indent=4, sort_keys=True))
+        body = data['msg']
+
+    # Create a Message and then call the Consumer()
     m = fedora_messaging.api.Message(
         topic=FEDORA_MESSAGING_TOPIC_LISTEN,
-        body=EXAMPLE_MESSAGE_BODY,
+        body=body,
     )
     c = Consumer()
     c.__call__(m)
