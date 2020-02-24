@@ -129,28 +129,14 @@ def delete_ref_in_repo(ref: str, repo: str, test: bool):
         logger.info('Skipping delete because of test mode')
         return
 
-    # Grab the commit hash from the ref
-    cmd = ['ostree', 'rev-parse', '--repo', repo, ref]
-    cp = runcmd(cmd)
-    commit = cp.stdout.decode('utf-8').strip()
-
-    # Prune all but the last commit 
-    cmd = ['ostree', 'prune', '--repo', repo,
-           '--only-branch', ref, '--refs-only', 
-           '--depth=0']
-    runcmd(cmd, capture_output=False)
-
-    # Delete the ref
+    # Delete the ref. We don't worry about pruning here as we'll
+    # run a generic prune for unreachable objects afterwards
     cmd = ['ostree', 'refs', '--repo', repo, '--delete', ref]
     runcmd(cmd)
 
     # Update the summary file since we deleted a ref
     cmd = ['ostree', 'summary', '--repo', repo, '-u']
     runcmd(cmd)
-
-    # Prune the last commit
-    cmd = ['ostree', 'prune', '--repo', repo, f'--delete-commit={commit}']
-    runcmd(cmd, capture_output=False)
 
 
 def prune_compose_repo(test=False):
@@ -185,6 +171,7 @@ def prune_prod_repo(test=False):
             continue
 
     # prune each branch in the policy with specified value
+    deleted_a_ref = False
     for ref,policy in PROD_REF_POLICIES.items():
 
         # Skip if there is no ref in the repo for this policy
@@ -198,6 +185,7 @@ def prune_prod_repo(test=False):
 
         if policy == 'delete':
             delete_ref_in_repo(ref, OSTREEPRODREPO, test)
+            deleted_a_ref = True
             continue
 
         prunearg = pruning_policy_to_args(policy)
@@ -208,6 +196,17 @@ def prune_prod_repo(test=False):
         if test:
             cmd.append('--no-prune')
         runcmd(cmd)
+
+    # If we deleted a ref from the repo then we'll just run a generic
+    # prune to delete any objects in the repo that aren't reachable
+    # via a ref. This should save some time since we only call ostree
+    # prune once, versus for every ref we deleted.
+    if deleted_a_ref:
+        cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO, '--refs-only']
+        if test:
+            cmd.append('--no-prune')
+        runcmd(cmd, capture_output=False)
+
 
 # XXX this function should not be used yet as there are a few
 # bugs to work out: 
