@@ -160,6 +160,11 @@ class Consumer(object):
                 branch=ostree_ref,
             )
 
+        # Update the summary file if we're in the prod repo. The compose
+        # repo doesn't use a summary file and creating one causes problems
+        if target_repo == "prod":
+            ostree_update_summary(target_repo_path)
+
 
 def assert_dirs_permissions(path: str):
     # Find all directories under path. We need to optimize os.walk()
@@ -280,9 +285,11 @@ def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
         cmd = ["ostree", f"--repo={dstrepo}", "refs", f"--create={branch}", commit]
     logger.info(f"Updating branch {branch} -> {commit} in {dstrepo}")
     runcmd(cmd)
-    # update summary file
+
+
+def ostree_update_summary(repo: str):
     logger.info("Updating summary file")
-    cmd = ["ostree", f"--repo={dstrepo}", "summary", "-u"]
+    cmd = ["ostree", f"--repo={repo}", "summary", "-u"]
     runcmd(cmd)
 
 
