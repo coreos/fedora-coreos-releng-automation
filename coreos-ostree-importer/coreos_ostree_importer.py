@@ -162,9 +162,27 @@ class Consumer(object):
 
 
 def assert_dirs_permissions(path: str):
+    # Find all directories under path. We need to optimize os.walk()
+    # here because it can take a really long time to find all the
+    # directories on the NFS mounts because it must look at every file
+    # and there are many many files in the directories under objects/*/.
+    # Here we'll optmize for the fact that we know objects/* are directories
+    # and objects/*/* are normal files so we don't need to traverse deeper.
+    directories = []
+    for root, dirs, files in os.walk(path, topdown=True):
+        # don't traverse into the objects/*/ directories
+        # dirs[:] = [] will cause os.walk to not traverse deeper
+        # https://stackoverflow.com/a/19859907
+        if root == os.path.join(path, 'objects'):
+            for d in dirs:
+                directories.append(os.path.join(root, d))
+            dirs[:] = []
+        else:
+            directories.append(root)
+    # Determine if any of the directories have inappropriate permissions
     founderror = False
-    for root, dirs, files in os.walk(path):
-        statinfo = os.stat(root)
+    for d in directories:
+        statinfo = os.stat(d)
         # Verifies group permissions are 0bXXX111XXX (---rwx---)
         if ((statinfo.st_mode & stat.S_IRWXG) != stat.S_IRWXG):
             logger.warning(f"Directory {root} does not have rwx group permissions!")
