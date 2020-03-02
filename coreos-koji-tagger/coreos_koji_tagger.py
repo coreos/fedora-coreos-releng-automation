@@ -15,6 +15,7 @@ import yaml
 import time
 
 from koji_cli.lib import watch_tasks
+from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
 # Set local logging 
 logger = logging.getLogger(__name__)
@@ -446,6 +447,9 @@ class Consumer(object):
                 watch_tasks(self.koji_client, [task], poll_interval=10)
                 logger.info('Dist-repo task has finished')
 
+    # retry to login every 30s for 15m before giving up
+    # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
+    @retry(retry=retry_if_exception_type(koji.AuthError), wait=wait_fixed(30), stop=stop_after_attempt(30))
     def koji_login(self):
         # If already authenticated then nothing to do
         # Catch koji.AuthError as that is what happens
