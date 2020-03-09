@@ -12,6 +12,7 @@ RUN dnf -y install dnf-plugins-core \
                    fedora-messaging \
                    koji             \
                    python3-pyyaml   \
+                   python3-tenacity \
                    krb5-workstation
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
