@@ -8,8 +8,8 @@ import subprocess
 import sys
 
 
-# this was copied from coreos-koji-tagger
-def get_NVRA_from_NEVRA(string: str) -> str:
+# this was partially copied from coreos-koji-tagger
+def get_rpminfo(string: str) -> str:
     form = hawkey.FORM_NEVRA
 
     # get a hawkey.Subject object for the string
@@ -20,34 +20,46 @@ def get_NVRA_from_NEVRA(string: str) -> str:
 
     # return the first hawkey.NEVRA item in the list of possibilities
     rpminfo = nevras[0]
-
-    # come up with rpm NVRA
-    nvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
-    return nvra
-
+    return rpminfo
 
 def is_override_lockfile(filename: str) -> bool:
     return (filename.startswith('manifest-lock.overrides.')
             and filename[-4:] in ['json', 'yaml'])
 
+def assert_epochs_match(overrides_epoch: int, rpmfile_epoch: str):
+    # normalize the input into a string
+    if overrides_epoch is None:
+       normalized_overrides_epoch = '(none)' # matches rpm -qp --queryformat='%{E}'
+    else:
+       normalized_overrides_epoch = str(overrides_epoch)
+    if  normalized_overrides_epoch != rpmfile_epoch:
+        raise Exception(f"Epoch mismatch between downloaded rpm ({rpmfile_epoch})"
+                        f" and overrides file entry ({overrides_epoch})")
 
 assert os.path.isdir("builds"), "Missing builds/ dir; is this a cosa workdir?"
 
 rpms = set()
+os.makedirs('overrides/rpm', exist_ok=True)
 for filename in os.listdir(os.path.join("src/config")):
     if is_override_lockfile(filename):
         with open(f'src/config/{filename}') as f:
             lockfile = yaml.safe_load(f)
         for pkg, pkgobj in lockfile['packages'].items():
-            rpms.add(get_NVRA_from_NEVRA(f"{pkg}-{pkgobj['evra']}"))
+            rpminfo = get_rpminfo(f"{pkg}-{pkgobj['evra']}")
+            rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
+            rpms.add(rpmnvra)
+            subprocess.check_call(['koji', 'download-build', '--rpm', rpmnvra], cwd='overrides/rpm')
+            # Make sure the epoch matches what was in the overrides file
+            # otherwise we can get errors: https://github.com/coreos/fedora-coreos-config/pull/293
+            cp = subprocess.run(['rpm', '-qp', '--queryformat', '%{E}', f'{rpmnvra}.rpm'],
+                                  check=True,
+                                  capture_output=True,
+                                  cwd='overrides/rpm')
+            rpmfile_epoch = cp.stdout.decode('utf-8')
+            assert_epochs_match(rpminfo.epoch, rpmfile_epoch)
 
 if not rpms:
     print("No overrides; exiting.")
-    sys.exit(0)
-
-# could probably be more efficient here by using the Koji API directly, but
-# meh... there shouldn't be that many overrides anyway
-for rpm in rpms:
-    os.makedirs('overrides/rpm', exist_ok=True)
-    subprocess.check_call(['koji', 'download-build', '--rpm', rpm],
-                          cwd='overrides/rpm')
+else:
+    for rpm in rpms:
+        print(f'Downloaded {rpm} to overrides dir')
