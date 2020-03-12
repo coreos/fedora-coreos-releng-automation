@@ -144,15 +144,9 @@ def get_next_iteration(x, y, z):
 
 
 def get_flattened_manifest():
-    # This is silly; rpm-ostree needs a repo even if it doesn't need it for
-    # --print-only. Create it (or do nothing; it's idempotent) in case this is
-    # a fresh cosa workdir.
-    subprocess.check_call(['ostree', 'init', '--repo=tmp/repo',
-                           '--mode=archive'])
     return yaml.safe_load(
-        subprocess.check_output(['rpm-ostree', 'compose', 'tree', '--repo',
-                                 'tmp/repo', '--print-only',
-                                 'src/config/manifest.yaml']))
+        subprocess.check_output(['rpm-ostree', 'compose', 'tree',
+                                 '--print-only', 'src/config/manifest.yaml']))
 
 
 def parse_version(version):
