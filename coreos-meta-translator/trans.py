@@ -105,6 +105,14 @@ for f in files:
         # metal specific additions
         arch_dict["media"]["metal"] = arch_dict["media"].get("metal", {})
         arch_dict["media"]["metal"]["artifacts"] = arch_dict["media"]["metal"].get("artifacts", {})
+        i = input_.get("images", {}).get("metal4k", None)
+        if i is not None:
+            # the 4k image is kinda weird; we want it at the same level as e.g.
+            # the regular 512b image, which normally is under `raw.xz`
+            ext = get_extension(i['path'], 'metal4k', arch)
+            arch_dict["media"]["metal"]["artifacts"][f"4k.{ext}"] = {
+                "disk": artifact(i)
+            }
         i = input_.get("images", {}).get("iso", None)
         if i is not None:
             arch_dict["media"]["metal"]["artifacts"]["installer.iso"] = {
