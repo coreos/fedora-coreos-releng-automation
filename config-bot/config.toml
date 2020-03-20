@@ -26,6 +26,9 @@ method = 'push'
 source-ref = 'testing-devel'
 target-refs = [
     'bodhi-updates',
+    # for now we inherit from testing-devel; see discussions starting from
+    # https://github.com/coreos/fedora-coreos-config/pull/180#issuecomment-534697400
+    'next-devel',
 ]
 skip-files = [
     'manifest.yaml',
