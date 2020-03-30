@@ -79,13 +79,13 @@ for f in files:
         # build the architectures dict
         arch_dict = {"media": {}}
         ensure_dup(input_, arch_dict, "ostree-commit", "commit")
-        generic_arches = ["aliyun", "aws", "azure", "exoscale", "qemu", "metal", "openstack", "vmware", "gcp"]
-        for ga in generic_arches:
-            if input_.get("images", {}).get(ga, None) is not None:
-                print(f"   - {ga}")
-                i = input_.get("images").get(ga)
-                ext = get_extension(i.get('path'), ga, arch)
-                arch_dict['media'][ga] = {
+        platforms = ["aliyun", "aws", "azure", "digitalocean", "exoscale", "gcp", "metal", "openstack", "qemu", "vmware"]
+        for platform in platforms:
+            if input_.get("images", {}).get(platform, None) is not None:
+                print(f"   - {platform}")
+                i = input_.get("images").get(platform)
+                ext = get_extension(i.get('path'), platform, arch)
+                arch_dict['media'][platform] = {
                     "artifacts": {
                         ext: {
                             "disk": artifact(i)
