@@ -45,7 +45,7 @@ COREOS_KOJI_USER = 'coreosbot'
 
 # XXX: should be in config file
 DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
-DEFAULT_GITHUB_REPO_BRANCH   = 'refs/heads/testing-devel'
+DEFAULT_GITHUB_REPO_BRANCHES = 'refs/heads/testing-devel refs/heads/next-devel'
 
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
@@ -240,14 +240,14 @@ class Consumer(object):
         self.github_repo_fullname = os.getenv(
                                         'GITHUB_REPO_FULLNAME',
                                         DEFAULT_GITHUB_REPO_FULLNAME)
-        self.github_repo_branch   = os.getenv(
-                                        'GITHUB_REPO_BRANCH',
-                                        DEFAULT_GITHUB_REPO_BRANCH)
+        self.github_repo_branches = os.getenv(
+                                        'GITHUB_REPO_BRANCHES',
+                                        DEFAULT_GITHUB_REPO_BRANCHES).split()
         self.koji_user         = COREOS_KOJI_USER
         self.koji_client       = koji.ClientSession(KOJI_SERVER_URL)
 
-        logger.info("Watching commits against %s branch of %s repo" %
-                    (self.github_repo_branch, self.github_repo_fullname))
+        logger.info("Watching commits against branches %s of %s repo" %
+                    (self.github_repo_branches, self.github_repo_fullname))
 
         # If a keytab was specified let's try to auth.
         self.keytab_file = os.getenv('COREOS_KOJI_TAGGER_KEYTAB_FILE')
@@ -263,7 +263,8 @@ class Consumer(object):
             logger.info('Will not attempt koji write operations')
 
         # do an initial run on startup in case we're out of sync
-        self.process_lockfiles()
+        for branch in self.github_repo_branches:
+            self.process_lockfiles(branch[len("refs/heads/"):])
 
 
     def __call__(self, message: fedora_messaging.api.Message):
@@ -283,7 +284,7 @@ class Consumer(object):
             logger.info(f'Skipping message from unrelated repo: {repo}')
             return
 
-        if (branch != self.github_repo_branch):
+        if (branch not in self.github_repo_branches):
             logger.info(f'Skipping message from unrelated branch: {branch}')
             return
 
@@ -303,10 +304,7 @@ class Consumer(object):
         self.process_lockfiles(commit)
 
     @catch_exceptions_and_continue
-    def process_lockfiles(self, commit=None):
-
-        rev = commit or self.github_repo_branch[len("refs/heads/"):]
-
+    def process_lockfiles(self, rev):
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
         for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
@@ -326,7 +324,7 @@ class Consumer(object):
         if not desiredrpms:
             logger.warning('No locked RPMs found!')
             logger.warning("Does the repo:ref (%s:%s) have any lockfiles?" %
-                            (self.github_repo_fullname, self.github_repo_branch))
+                            (self.github_repo_fullname, rev))
             logger.warning('Continuing...')
             return
 
