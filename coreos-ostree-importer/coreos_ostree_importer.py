@@ -188,12 +188,13 @@ def assert_dirs_permissions(path: str):
     founderror = False
     for d in directories:
         statinfo = os.stat(d)
-        # Verifies group permissions are 0bXXX111XXX (---rwx---)
-        if ((statinfo.st_mode & stat.S_IRWXG) != stat.S_IRWXG):
-            logger.warning(f"Directory {root} does not have rwx group permissions!")
+        desired_permissions = stat.S_IRWXG | stat.S_ISGID
+        # Verifies group permissions are rwx+setgid
+        if ((statinfo.st_mode & desired_permissions) != desired_permissions):
+            logger.warning(f"Directory {root} does not have rwx+setgid group permissions!")
             founderror = True
     if founderror:
-        raise Exception(f"Found directories that did not have rwx group permissions")
+        raise Exception(f"Found directories with unexpected permissions/ownership")
 
 
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
