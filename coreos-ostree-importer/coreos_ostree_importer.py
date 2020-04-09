@@ -191,11 +191,11 @@ def assert_dirs_permissions(path: str):
         desired_permissions = stat.S_IRWXG | stat.S_ISGID
         # Verifies group permissions are rwx+setgid
         if ((statinfo.st_mode & desired_permissions) != desired_permissions):
-            logger.warning(f"Directory {root} does not have rwx+setgid group permissions!")
+            logger.warning(f"Directory {d} does not have rwx+setgid group permissions!")
             founderror = True
         # Verifies group owner is 263 (ftpsync)
         if (statinfo.st_gid != 263):
-            logger.warning(f"Directory {root} does not have gid=263!")
+            logger.warning(f"Directory {d} does not have gid=263!")
             founderror = True
     if founderror:
         raise Exception(f"Found directories with unexpected permissions/ownership")
