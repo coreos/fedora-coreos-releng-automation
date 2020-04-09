@@ -11,7 +11,8 @@ RUN dnf update -y
 RUN dnf -y install \
         fedora-messaging \
         python-requests  \
-        ostree
+        ostree           \
+        strace
 
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
