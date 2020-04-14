@@ -6,14 +6,15 @@ github.repo.name = 'fedora-coreos-config'
 github.token.username = 'coreosbot'
 github.token.path = '/var/run/secrets/coreos.fedoraproject.org/github-token/token'
 
-[sync-build-lockfiles]
-builds-base-url = 'https://builds.coreos.fedoraproject.org/prod/streams'
-streams = [
-    'bodhi-updates',
-]
-trigger.mode = 'periodic'
-trigger.period = '15m'
-method = 'push'
+# XXX: disabled for now: https://github.com/coreos/fedora-coreos-config/pull/335#issuecomment-610634917
+#[sync-build-lockfiles]
+#builds-base-url = 'https://builds.coreos.fedoraproject.org/prod/streams'
+#streams = [
+#    'bodhi-updates',
+#]
+#trigger.mode = 'periodic'
+#trigger.period = '15m'
+#method = 'push'
 
 [promote-lockfiles]
 source-ref = 'bodhi-updates'
