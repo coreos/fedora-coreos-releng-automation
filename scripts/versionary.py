@@ -23,6 +23,9 @@ UNLOCKED_STREAMS = [
     'branched',
     'bodhi-updates-testing',
     'bodhi-updates',
+    # XXX: temporary hack (see https://github.com/coreos/fedora-coreos-config/pull/351)
+    'next-devel',
+    'next',
 ]
 
 # https://github.com/coreos/fedora-coreos-tracker/issues/211#issuecomment-543547587
