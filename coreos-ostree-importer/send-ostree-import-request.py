@@ -78,7 +78,7 @@ def send_ostree_import_request(args):
             "target_repo": args.repo,
         },
     )
-    # validate_response(response)
+    validate_response(response)
 
 
 def get_bucket_and_prefix(path):
