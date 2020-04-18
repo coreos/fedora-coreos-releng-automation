@@ -63,8 +63,7 @@ def send_ostree_import_request(args):
     # Example: https://fcos-builds.s3.amazonaws.com/prod/streams/stable/builds/31.20200127.3.0/x86_64/fedora-coreos-31.20200127.3.0-ostree.x86_64.tar
     commit_url = f"https://{bucket}.s3.amazonaws.com/{prefix}/builds/{buildid}/{basearch}/{build['images']['ostree']['path']}"
 
-    # response = send_request_and_wait_for_response(
-    send_message(
+    response = send_request_and_wait_for_response(
         request_type="ostree-import",
         config=args.fedmsg_conf,
         environment=environment,
