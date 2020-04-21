@@ -14,7 +14,7 @@ import sys
 # Pick up libraries we use that are delivered along with COSA
 sys.path.insert(0, '/usr/lib/coreos-assembler')
 from cosalib.meta import GenericBuildMeta
-from cosalib.fedora_messaging_request import send_message
+from cosalib.fedora_messaging_request import send_request_and_wait_for_response
 
 # Example datagrepper URLs to inspect sent messages:
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import&delta=100000
