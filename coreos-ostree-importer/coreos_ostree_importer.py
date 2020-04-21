@@ -292,7 +292,7 @@ def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
     cmd = ["ostree", f"--repo={dstrepo}", "pull-local", srcrepo, commit]
     runcmd(cmd)
     # update branch
-    if branch_exists:
+    if ostree_branch_exists(repo=dstrepo, branch=branch):
         cmd = ["ostree", f"--repo={dstrepo}", "reset", branch, commit]
     else:
         cmd = ["ostree", f"--repo={dstrepo}", "refs", f"--create={branch}", commit]
