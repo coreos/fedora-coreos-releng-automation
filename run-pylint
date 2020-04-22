@@ -1,0 +1,16 @@
+#/bin/bash
+set -euo pipefail
+
+# need to set this so pylint knows where to find the cosa libraries
+export PYTHONPATH=/usr/lib/coreos-assembler
+
+pyscripts=
+for f in $(find . -type f -executable -print); do
+    if [[ ${f} == *.py ]]; then
+        pyscripts+=" $f"
+    elif head -1 ${f} | grep -q python; then
+        pyscripts+=" $f"
+    fi
+done
+
+pylint -E ${pyscripts}

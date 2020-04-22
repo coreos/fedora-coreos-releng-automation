@@ -1,0 +1,9 @@
+// Documentation: https://github.com/coreos/coreos-ci/blob/master/README-upstream-ci.md
+
+cosaPod(runAsUser: 0) {
+    checkout scm
+    // required by config-bot (XXX: should have a deps.txt file for each
+    // subproject or something)
+    shwrap("dnf install -y python3-aiohttp")
+    shwrap("./run-pylint")
+}
