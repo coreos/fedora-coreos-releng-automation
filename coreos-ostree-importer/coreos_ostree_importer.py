@@ -172,8 +172,11 @@ class Consumer(object):
             # sometimes we do multiple builds for a stream (which get imported
             # into the compose repo) before we actually do a release.
             if target_repo != "compose" and has_parent_commit and branch_exists:
-                parent = ostree_get_parent_commit(repo=srcrepo, commit=commit)
-                assert_branch_points_to_commit(repo=dstrepo, branch=branch, commit=parent)
+                parent = ostree_get_parent_commit(repo=source_repo_path,
+                                                  commit=ostree_checksum)
+                assert_branch_points_to_commit(repo=target_repo_path,
+                                               branch=ostree_ref,
+                                               commit=parent)
 
             # Import the commit into the target repo
             ostree_pull_local(
