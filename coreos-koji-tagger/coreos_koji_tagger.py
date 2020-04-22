@@ -378,6 +378,7 @@ class Consumer(object):
             logger.info('Adding packages to the '
                         f'{self.target_tag} tag: {pkgstoadd}')
             if self.keytab_file:
+                # pylint: disable=E1102
                 with self.koji_client.multicall(strict=True) as m:
                     for pkg in pkgstoadd:
                         m.packageListAdd(self.target_tag, pkg,
@@ -395,6 +396,7 @@ class Consumer(object):
             logger.info('Tagging the following (tag, nvr): \n\t%s' %
                                             '\n\t'.join(map(str, tuples)))
             if self.keytab_file:
+                # pylint: disable=E1102
                 with self.koji_client.multicall(strict=True) as m:
                     tasks = [m.tagBuild(tag=tag, build=nvr)
                                     for (tag, nvr) in tuples]
@@ -472,7 +474,7 @@ class Consumer(object):
         buildsinfo = {} # dict of buildid -> BuildInfo object
 
         # Grab info about each of the rpms
-        with self.koji_client.multicall(strict=True) as m:
+        with self.koji_client.multicall(strict=True) as m:  # pylint: disable=E1102
             nvras = [get_NVRA_from_NEVRA(nevra) for nevra in rpmnevras]
             rpminfos = [m.getRPM(nvra, strict=True) for nvra in nvras]
 
@@ -485,7 +487,7 @@ class Consumer(object):
         # Grab info about each builds buildroot
         buildinfo = {}
         brinfo = {}
-        with self.koji_client.multicall(strict=True) as m:
+        with self.koji_client.multicall(strict=True) as m:  # pylint: disable=E1102
             for buildid in buildsinfo.keys():
                 buildinfo[buildid] = m.getBuild(buildid, strict=True)
                 brinfo[buildid] = \
