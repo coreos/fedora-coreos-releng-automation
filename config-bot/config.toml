@@ -27,7 +27,8 @@ github.token.path = '/var/run/secrets/coreos.fedoraproject.org/github-token/toke
 [propagate-files]
 source-ref = 'testing-devel'
 target-refs = [
-    'bodhi-updates',
+    # XXX: disabled for now: https://github.com/coreos/fedora-coreos-config/pull/335#issuecomment-610634917
+    # 'bodhi-updates',
     # for now we inherit from testing-devel; see discussions starting from
     # https://github.com/coreos/fedora-coreos-config/pull/180#issuecomment-534697400
     'next-devel',
