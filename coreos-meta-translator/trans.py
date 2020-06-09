@@ -79,7 +79,7 @@ for f in files:
         # build the architectures dict
         arch_dict = {"media": {}}
         ensure_dup(input_, arch_dict, "ostree-commit", "commit")
-        platforms = ["aliyun", "aws", "azure", "digitalocean", "exoscale", "gcp", "metal", "openstack", "qemu", "vmware"]
+        platforms = ["aliyun", "aws", "azure", "digitalocean", "exoscale", "gcp", "metal", "openstack", "qemu", "vmware", "vultr"]
         for platform in platforms:
             if input_.get("images", {}).get(platform, None) is not None:
                 print(f"   - {platform}")
