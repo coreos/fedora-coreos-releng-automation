@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:31
+FROM registry.fedoraproject.org/fedora:32
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
 # output immediately comes to the console
@@ -8,13 +8,11 @@ ENV PYTHONUNBUFFERED=true
 RUN dnf update -y
 
 # Install needed rpms
-# Grab ostree from koji for now for https://github.com/ostreedev/ostree/pull/1984
 RUN dnf -y install \
         fedora-messaging \
         python-requests  \
-        strace           \
-        https://kojipkgs.fedoraproject.org/packages/ostree/2020.3/3.fc31/x86_64/ostree-2020.3-3.fc31.x86_64.rpm \
-        https://kojipkgs.fedoraproject.org/packages/ostree/2020.3/3.fc31/x86_64/ostree-libs-2020.3-3.fc31.x86_64.rpm
+        ostree           \
+        strace
 
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
