@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:31
+FROM registry.fedoraproject.org/fedora:32
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
 # periods with no newline get printed immediately to the screen
