@@ -26,8 +26,8 @@ RUN dnf -y install \
 # operations to not put the repo in a bad state.
 RUN echo 'umask 0002' > /etc/profile.d/umask-for-openshift.sh
 
-# Put the file into a location that can be imported
-ADD coreos_ostree_importer.py /usr/lib/python3.7/site-packages/
+# Add coreos_ostree_importer to the container
+ADD coreos_ostree_importer.py /usr/local/lib/
 
 # Copy in the fedora messaging config into the
 # default location

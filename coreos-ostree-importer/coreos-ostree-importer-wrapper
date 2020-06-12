@@ -13,4 +13,4 @@ set -e
 umask 0002
 
 # exec to call fedora-messaging CLI and tell it to use the Consumer
-exec fedora-messaging consume --callback=coreos_ostree_importer:Consumer
+exec fedora-messaging consume --callback-file=/usr/local/lib/coreos_ostree_importer.py:Consumer

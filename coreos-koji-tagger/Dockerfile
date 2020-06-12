@@ -42,8 +42,8 @@ RUN sed -i 's/format =.*$/format = "%(asctime)s %(levelname)s %(name)s - %(messa
 # We only care about org.fedoraproject.prod.github.push messages
 RUN sed -i 's/^routing_keys.*$/routing_keys = ["org.fedoraproject.prod.github.push"]/' /work/my_config.toml
 
-# Put the file into a location that can be imported
-ADD coreos_koji_tagger.py /usr/lib/python3.7/site-packages/
+# Add coreos_koji_tagger to the container
+ADD coreos_koji_tagger.py /work/
 
 # Environment variable to be defined by the user that defines the
 # filesystem path to the keytab file. If blank it will be ignored
@@ -61,5 +61,5 @@ ENV COREOS_KOJI_TAGGER_KEYTAB_FILE ''
 RUN sed -i 's/^    default_ccache_name/#   default_ccache_name/' /etc/krb5.conf
 
 # Call fedora-messaging CLI and tell it to use the Consumer
-# class from the included module.
-CMD fedora-messaging --conf /work/my_config.toml consume --callback=coreos_koji_tagger:Consumer
+# class from coreos_koji_tagger.py
+CMD fedora-messaging --conf /work/my_config.toml consume --callback-file=/work/coreos_koji_tagger.py:Consumer
