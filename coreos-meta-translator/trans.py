@@ -102,6 +102,15 @@ for f in files:
                     "image": ami_dict["hvm"]
                 }
 
+        # GCP specific additions
+        if input_.get("gcp", None) is not None:
+            arch_dict["media"]["gcp"] = arch_dict["media"].get("gcp", {})
+            arch_dict["media"]["gcp"]["image"] = arch_dict["media"]["gcp"].get("image", {})
+            arch_dict["media"]["gcp"]["image"].update(input_.get("gcp", {}))
+            arch_dict["media"]["gcp"]["image"]["name"] = arch_dict["media"]["gcp"]["image"].pop("image")
+            # remove the url as we haven't decided to expose that information publicly yet
+            arch_dict["media"]["gcp"]["image"].pop("url")
+
         # metal specific additions
         arch_dict["media"]["metal"] = arch_dict["media"].get("metal", {})
         arch_dict["media"]["metal"]["artifacts"] = arch_dict["media"]["metal"].get("artifacts", {})
