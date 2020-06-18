@@ -11,7 +11,8 @@ RUN dnf update -y
 RUN dnf -y install \
         fedora-messaging \
         python-requests  \
-        ostree           \
+        https://kojipkgs.fedoraproject.org/packages/ostree/2020.3/5.fc32/x86_64/ostree-2020.3-5.fc32.x86_64.rpm \
+        https://kojipkgs.fedoraproject.org/packages/ostree/2020.3/5.fc32/x86_64/ostree-libs-2020.3-5.fc32.x86_64.rpm \
         strace
 
 # Configure a umask of 0002 which will allow for the group permissions
