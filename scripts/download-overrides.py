@@ -7,6 +7,7 @@ import yaml
 import subprocess
 import sys
 
+arch = os.uname().machine
 
 # this was partially copied from coreos-koji-tagger
 def get_rpminfo(string: str) -> str:
@@ -23,7 +24,7 @@ def get_rpminfo(string: str) -> str:
     return rpminfo
 
 def is_override_lockfile(filename: str) -> bool:
-    return (filename.startswith('manifest-lock.overrides.')
+    return (filename.startswith(f'manifest-lock.overrides.{arch}')
             and filename[-4:] in ['json', 'yaml'])
 
 def assert_epochs_match(overrides_epoch: int, rpmfile_epoch: str):
@@ -44,6 +45,8 @@ for filename in os.listdir(os.path.join("src/config")):
     if is_override_lockfile(filename):
         with open(f'src/config/{filename}') as f:
             lockfile = yaml.safe_load(f)
+        if lockfile is None or 'packages' not in lockfile:
+            continue
         for pkg, pkgobj in lockfile['packages'].items():
             rpminfo = get_rpminfo(f"{pkg}-{pkgobj['evra']}")
             rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
