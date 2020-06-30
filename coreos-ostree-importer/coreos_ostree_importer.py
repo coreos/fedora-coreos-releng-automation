@@ -321,7 +321,12 @@ def ostree_repo_exists(repo: str) -> bool:
 
 def ostree_commit_exists(repo: str, commit: str) -> bool:
     cmd = ["ostree", f"--repo={repo}", "show", commit]
-    return runcmd(cmd, check=False).returncode == 0
+    if runcmd(cmd, check=False).returncode != 0:
+        return False
+    # the commit object exists, but it may be partial
+    if os.path.exists(os.path.join(repo, 'state', f'{commit}.commitpartial')):
+        return False
+    return True
 
 
 def ostree_branch_exists(repo: str, branch: str) -> bool:
