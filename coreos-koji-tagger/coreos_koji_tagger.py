@@ -15,7 +15,6 @@ import yaml
 import time
 
 from koji_cli.lib import watch_tasks
-from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_exception_type
 
 # Set local logging 
 logger = logging.getLogger(__name__)
@@ -194,6 +193,10 @@ def catch_exceptions_and_continue(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except koji.AuthError as e:
+            logger.error('Received koji.AuthError from koji. Exiting so a new pod will get created.')
+            logger.error('See https://github.com/coreos/fedora-coreos-releng-automation/issues/70')
+            raise
         except Exception as e:
             logger.error('Caught Exception!')
             logger.error('###################################')
@@ -297,9 +300,12 @@ class Consumer(object):
             logger.error('No commit id in message!')
             return
 
-        # In case our connection has expired, re-Auth to koji
+        # Check the login. If it's bad then a koji.AuthError exception will get thrown.
+        # and we'll exit because catch_exceptions_and_continue() will raise it.
+        # This is the only way we've come up with to deal with the problem in
+        # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
         if self.keytab_file:
-            self.koji_login()
+            self.koji_client.getLoggedInUser()
 
         self.process_lockfiles(commit)
 
@@ -447,20 +453,7 @@ class Consumer(object):
                 watch_tasks(self.koji_client, [task], poll_interval=10)
                 logger.info('Dist-repo task has finished')
 
-    # retry to login every 30s for 15m before giving up
-    # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
-    @retry(retry=retry_if_exception_type(koji.AuthError), wait=wait_fixed(30), stop=stop_after_attempt(30))
     def koji_login(self):
-        # If already authenticated then nothing to do
-        # Catch koji.AuthError as that is what happens
-        # when we get logged out.
-        try:
-            if self.koji_client.getLoggedInUser():
-                return
-        except koji.AuthError as e:
-            logger.info('Received koji.AuthError from koji. Re-attempting login.')
-            pass
-        # Login!
         principal = find_principal_from_keytab(self.keytab_file)
         self.koji_client.gssapi_login(principal, self.keytab_file)
 
