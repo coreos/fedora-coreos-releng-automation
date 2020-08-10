@@ -12,6 +12,7 @@ RUN dnf -y install dnf-plugins-core \
                    fedora-messaging \
                    koji             \
                    python3-pyyaml   \
+                   https://kojipkgs.fedoraproject.org//packages/python-requests-gssapi/1.2.2/1.fc32/noarch/python3-requests-gssapi-1.2.2-1.fc32.noarch.rpm \
                    krb5-workstation
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
