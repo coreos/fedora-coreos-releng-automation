@@ -130,6 +130,13 @@ async def do_sync(base_url, method, stream, build):
             return False
 
     async with git:
+        try:
+            git.fetch()
+        except Exception as e:
+            # flaked while fetching from GitHub? just ignore, we'll retry
+            logging.error(f"Got exception during fetch: {e}")
+            return False
+
         git.checkout(stream)
         for path, data in lockfiles.items():
             with open(git.path(path), 'wb') as f:
@@ -143,7 +150,7 @@ async def do_sync(base_url, method, stream, build):
             except Exception as e:
                 # this can happen if we raced against someone/something
                 # else pushing to the ref and we're out of date; we'll retry
-                logging.info(f"Got exception during push: {e}")
+                logging.error(f"Got exception during push: {e}")
                 return False
 
     return True
@@ -171,6 +178,13 @@ async def promote_lockfiles(cfg):
         logging.info("start promote_lockfiles")
 
         async with git:
+            try:
+                git.fetch()
+            except Exception as e:
+                # flaked while fetching from GitHub? just ignore, we'll retry
+                logging.error(f"Got exception during fetch: {e}")
+                continue
+
             # is there a new commit?
             source_ref_checksum = git.rev_parse(source_ref)
             if last_source_ref_checksum == source_ref_checksum:
@@ -230,6 +244,13 @@ async def propagate_files(cfg):
         logging.info("start propagate_files")
 
         async with git:
+            try:
+                git.fetch()
+            except Exception as e:
+                # flaked while fetching from GitHub? just ignore, we'll retry
+                logging.error(f"Got exception during fetch: {e}")
+                continue
+
             # is there a new commit?
             source_ref_checksum = git.rev_parse(source_ref)
             if last_source_ref_checksum == source_ref_checksum:
@@ -329,7 +350,6 @@ class Git:
     async def __aenter__(self):
         logging.info("acquiring lock")
         await self._lock.acquire()
-        self.cmd('fetch', 'origin', '--prune', '+refs/heads/*:refs/heads/*')
         assert self._git_work is None
         d = tempfile.TemporaryDirectory(prefix="config-bot.work.")
         self.cmd('worktree', 'add', '--detach', d.name, 'HEAD')
@@ -341,6 +361,9 @@ class Git:
         self.cmd('worktree', 'prune')
         self._lock.release()
         logging.info("releasing lock")
+
+    def fetch(self):
+        self.cmd('fetch', 'origin', '--prune', '+refs/heads/*:refs/heads/*')
 
     def cmd(self, *args):
         wd = self._git_work or self._git_bare
