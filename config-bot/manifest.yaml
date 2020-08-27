@@ -66,13 +66,13 @@ objects:
             - name: config-bot
               image: config-bot
               volumeMounts:
-                - name: github-token-mount
+                - name: github-coreosbot-token
                   mountPath: /var/run/secrets/coreos.fedoraproject.org/github-token
                   readOnly: true
           volumes:
-          - name: github-token-mount
+          - name: github-coreosbot-token
             secret:
-              secretName: config-bot-github-token
+              secretName: github-coreosbot-token
       triggers:
         - type: ConfigChange
         - type: ImageChange
