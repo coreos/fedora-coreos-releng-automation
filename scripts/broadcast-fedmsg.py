@@ -44,6 +44,7 @@ def parse_args():
     build_state_change.add_argument("--basearch", required=True)
     build_state_change.add_argument("--stream", required=True)
     build_state_change.add_argument("--state", required=True)
+    build_state_change.add_argument("--build-dir")
     build_state_change.add_argument("--result")
     build_state_change.set_defaults(func=msg_build_state_change)
 
@@ -65,6 +66,7 @@ def msg_build_state_change(args):
         "basearch": args.basearch,
         "stream": args.stream,
         "state": args.state,
+        "build_dir": args.build_dir,
     }
     if args.result:
         body['result'] = args.result
