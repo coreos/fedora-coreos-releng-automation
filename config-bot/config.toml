@@ -32,6 +32,7 @@ target-refs = [
     # for now we inherit from testing-devel; see discussions starting from
     # https://github.com/coreos/fedora-coreos-config/pull/180#issuecomment-534697400
     'next-devel',
+    'rawhide',
 ]
 skip-files = [
     'manifest.yaml',
