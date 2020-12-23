@@ -67,6 +67,7 @@ def msg_build_state_change(args):
         "stream": args.stream,
         "state": args.state,
         "build_dir": args.build_dir,
+        "build_metadata": f"{args.build_dir}/meta.json",
     }
     if args.result:
         body['result'] = args.result
