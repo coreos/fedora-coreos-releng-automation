@@ -46,6 +46,8 @@ COREOS_KOJI_USER = 'coreosbot'
 DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
 DEFAULT_GITHUB_REPO_BRANCHES = 'refs/heads/testing-devel refs/heads/next-devel'
 
+ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
+
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
 EXAMPLE_MESSAGE_BODY = json.loads("""
@@ -313,20 +315,24 @@ class Consumer(object):
     def process_lockfiles(self, rev):
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
-        for arch in ['x86_64', 'aarch64', 'ppc64le', 's390x']:
-            for lockfile in ['manifest-lock', 'manifest-lock.overrides']:
-                for filetype in ['yaml', 'json']:
-                    url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{arch}.{filetype}'
-                    logger.info(f'Attempting to retrieve data from {url}')
-                    r = requests.get(url)
-                    if r.ok:
-                        # parse the lockfile and add the set of rpm NEVRAs (strings)
-                        desiredrpms.update(parse_lockfile_data(r.text, filetype))
-                        break # If both yaml and json files exist, only parse one 
-                              # of them. Prefer yaml.
-                    else:
-                        # Log any errors we encounter. 404s are ok, but won't hurt to log
-                        logger.warning('URL request error: %s' % r.text.strip())
+
+        def archify(f):
+            return [f'{f}.{arch}' for arch in ARCHES]
+
+        for lockfile in (archify('manifest-lock') +
+                         archify('manifest-lock.overrides')):
+            for filetype in ['yaml', 'json']:
+                url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{filetype}'
+                logger.info(f'Attempting to retrieve data from {url}')
+                r = requests.get(url)
+                if r.ok:
+                    # parse the lockfile and add the set of rpm NEVRAs (strings)
+                    desiredrpms.update(parse_lockfile_data(r.text, filetype))
+                    break # If both yaml and json files exist, only parse one 
+                          # of them. Prefer yaml.
+                else:
+                    # Log any errors we encounter. 404s are ok, but won't hurt to log
+                    logger.warning('URL request error: %s' % r.text.strip())
         if not desiredrpms:
             logger.warning('No locked RPMs found!')
             logger.warning("Does the repo:ref (%s:%s) have any lockfiles?" %
