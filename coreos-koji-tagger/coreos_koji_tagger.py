@@ -320,7 +320,8 @@ class Consumer(object):
             return [f'{f}.{arch}' for arch in ARCHES]
 
         for lockfile in (archify('manifest-lock') +
-                         archify('manifest-lock.overrides')):
+                         archify('manifest-lock.overrides') +
+                         ['manifest-lock.overrides']):
             for filetype in ['yaml', 'json']:
                 url = f'https://raw.githubusercontent.com/{self.github_repo_fullname}/{rev}/{lockfile}.{filetype}'
                 logger.info(f'Attempting to retrieve data from {url}')
@@ -597,6 +598,8 @@ def parse_lockfile_data(text: str, filetype: str) -> set:
       packages:
         GeoIP:
           evra: 1.6.12-5.fc30.x86_64
+        foobar:
+          evr: 3.2.1-1.fc33
     """
 
     if filetype == 'json':
@@ -609,7 +612,14 @@ def parse_lockfile_data(text: str, filetype: str) -> set:
         logger.debug(yaml.safe_dump(data))
 
     # We only care about the NEVRAs, so just accumulate those and return
-    return set([f'{name}-{v["evra"]}' for name, v in data['packages'].items()])
+    locked_pkgs = set()
+    for name, v in data['packages'].items():
+        if 'evr' in v:
+            for arch in ARCHES:
+                locked_pkgs.add(f'{name}-{v["evr"]}.{arch}')
+        else:
+            locked_pkgs.add(f'{name}-{v["evra"]}')
+    return locked_pkgs
 
 def get_releasever_from_buildroottag(buildroottag: str) -> str:
     logger.debug(f'Checking buildroottag {buildroottag}')
@@ -647,7 +657,7 @@ packages:
   NetworkManager-libnm:
     evra: 1:1.16.2-1.fc30.x86_64
   acl:
-    evra: 2.2.53-3.fc30.x86_64
+    evr: 2.2.53-3.fc30
   adcli:
     evra: 0.8.2-3.fc30.x86_64
   afterburn:
