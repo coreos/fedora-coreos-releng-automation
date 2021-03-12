@@ -24,7 +24,8 @@ def get_rpminfo(string: str) -> str:
     return rpminfo
 
 def is_override_lockfile(filename: str) -> bool:
-    return (filename.startswith(f'manifest-lock.overrides.{arch}')
+    return ((filename.startswith(f'manifest-lock.overrides') or
+             filename.startswith(f'manifest-lock.overrides.{arch}'))
             and filename[-4:] in ['json', 'yaml'])
 
 def assert_epochs_match(overrides_epoch: int, rpmfile_epoch: str):
@@ -48,7 +49,10 @@ for filename in os.listdir(os.path.join("src/config")):
         if lockfile is None or 'packages' not in lockfile:
             continue
         for pkg, pkgobj in lockfile['packages'].items():
-            rpminfo = get_rpminfo(f"{pkg}-{pkgobj['evra']}")
+            if 'evr' in pkgobj:
+                rpminfo = get_rpminfo(f"{pkg}-{pkgobj['evr']}.{arch}")
+            else:
+                rpminfo = get_rpminfo(f"{pkg}-{pkgobj['evra']}")
             rpmnvra = f"{rpminfo.name}-{rpminfo.version}-{rpminfo.release}.{rpminfo.arch}"
             rpms.add(rpmnvra)
             subprocess.check_call(['koji', 'download-build', '--rpm', rpmnvra], cwd='overrides/rpm')
