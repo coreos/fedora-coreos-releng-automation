@@ -24,9 +24,8 @@ def get_rpminfo(string: str) -> str:
     return rpminfo
 
 def is_override_lockfile(filename: str) -> bool:
-    return ((filename.startswith(f'manifest-lock.overrides') or
-             filename.startswith(f'manifest-lock.overrides.{arch}'))
-            and filename[-4:] in ['json', 'yaml'])
+    return (filename == "manifest-lock.overrides.yaml" or
+            filename == f'manifest-lock.overrides.{arch}.yaml')
 
 def assert_epochs_match(overrides_epoch: int, rpmfile_epoch: str):
     # normalize the input into a string
