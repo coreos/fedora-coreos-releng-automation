@@ -38,6 +38,7 @@ target-refs = [
 skip-files = [
     'manifest.yaml',
     'manifest-lock.*',
+    'image.yaml',
 ]
 trigger.mode = 'periodic'
 trigger.period = '15m'
