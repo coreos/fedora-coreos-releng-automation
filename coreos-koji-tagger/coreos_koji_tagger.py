@@ -440,7 +440,7 @@ class Consumer(object):
                     logger.error('Some builds never got signed..  Giving up')
                     return
                 # This code is mostly stolen from:
-                # https://pagure.io/releng/tag2distrepo/blob/master/f/tag2distrepo.py
+                # https://pagure.io/releng/tag2distrepo/blob/main/f/tag2distrepo.py
                 taginfo = self.koji_client.getTag(self.target_tag)
                 keys = taginfo['extra'].get("tag2distrepo.keys", '').split()
                 task_opts = {
