@@ -24,7 +24,7 @@ certfile = "coreos.crt"
 # Set the Application name/url/email
 [client_properties]
 app = "CoreOS OSTree Importer"
-app_url = "https://github.com/coreos/fedora-coreos-releng-automation/tree/master/coreos-ostree-importer"
+app_url = "https://github.com/coreos/fedora-coreos-releng-automation/tree/main/coreos-ostree-importer"
 app_contacts_email = ["coreos@lists.fedoraproject.org"]
 
 [exchanges."amq.topic"]

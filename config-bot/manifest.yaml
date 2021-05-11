@@ -13,7 +13,7 @@ parameters:
     value: https://github.com/coreos/fedora-coreos-releng-automation
   - description: Git branch/tag reference for Dockerfile
     name: REPO_REF
-    value: master
+    value: main
   - description: GitHub webhook secret
     name: GITHUB_WEBHOOK_SECRET
     from: '[A-Z0-9]{32}'
