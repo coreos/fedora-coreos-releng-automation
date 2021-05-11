@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:32
+FROM registry.fedoraproject.org/fedora:34
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
 # output immediately comes to the console
