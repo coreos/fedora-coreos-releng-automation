@@ -5,19 +5,16 @@ appropriate koji tags to be consumed by Fedora CoreOS build processes.
 
 # Deploying in Fedora
 
+The [playbook](https://pagure.io/fedora-infra/ansible/blob/main/f/playbooks/openshift-apps/coreos-koji-tagger.yml)
+and [supporting files](https://pagure.io/fedora-infra/ansible/blob/main/f/roles/openshift-apps/coreos-koji-tagger)
+for deploying to Fedora's OpenShift Instance are in the
+[Fedora Infra Ansible repo](https://pagure.io/fedora-infra/ansible).
 
-The files for deploying to Fedora's OpenShift Instance are:
-
-- [playbooks/openshift-apps/coreos-koji-tagger.yml](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/playbooks/openshift-apps/coreos-koji-tagger.yml)
-- [roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml)
-- [roles/openshift-apps/coreos-koji-tagger/templates/deploymentconfig.yml](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/deploymentconfig.yml)
-- [roles/openshift-apps/coreos-koji-tagger/templates/imagestream.yml](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/imagestream.yml)
-
-This can be deployed by people with appropriate permissions by
+The application can be deployed by people with appropriate permissions by
 executing:
 
 ```
-[localhost]$ ssh batcave01.phx2.fedoraproject.org
+[localhost]$ ssh batcave01.iad2.fedoraproject.org
 [batcave01]$ sudo rbac-playbook openshift-apps/coreos-koji-tagger.yml
 ```
 
@@ -28,6 +25,16 @@ The Application will then be running in Fedora OpenShift instances:
 
 If you have appropriate permissions you'll be able to view them in the
 OpenShift web interface.
+
+To limit executing playbooks against `prod` or `staging` you can use
+`-l os_masters[0]` or `-l os_masters_stg[0]`.
+
+To take down the application completely:
+
+```
+[localhost]$ ssh batcave01.iad2.fedoraproject.org
+[batcave01]$ sudo rbac-playbook -t delete openshift-apps/coreos-koji-tagger.yml
+```
 
 # Testing in Fedora Stage
 
