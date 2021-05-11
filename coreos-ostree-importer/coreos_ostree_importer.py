@@ -225,6 +225,7 @@ def assert_dirs_permissions(path: str):
             founderror = True
     if founderror:
         print(f"XXX: Found directories with unexpected permissions/ownership")
+        print(f"XXX: For more information see https://pagure.io/releng/issue/8811")
         #raise Exception(f"Found directories with unexpected permissions/ownership")
 
 
