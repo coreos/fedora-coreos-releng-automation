@@ -19,7 +19,7 @@ executing:
 [batcave01]$ sudo rbac-playbook openshift-apps/coreos-ostree-importer.yml
 ```
 
-The Application will then be running in Fedora OpenShift instances:
+The application will then be running in Fedora OpenShift instances:
 
 - [PROD](https://os.fedoraproject.org/console/project/coreos-ostree-importer/)
 - [STAGE](https://os.stg.fedoraproject.org/console/project/coreos-ostree-importer/)
