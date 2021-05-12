@@ -4,6 +4,39 @@ Source code that watches for ostree-import requests on the fedora
 messaging bus and imports those commit objects into the ostree
 repositories managed by Fedora infra/releng teams. 
 
+# Deploying in Fedora
+
+The [playbook](https://pagure.io/fedora-infra/ansible/blob/main/f/playbooks/openshift-apps/coreos-ostree-importer.yml)
+and [supporting files](https://pagure.io/fedora-infra/ansible/blob/main/f/roles/openshift-apps/coreos-ostree-importer)
+for deploying to Fedora's OpenShift Instance are in the
+[Fedora Infra Ansible repo](https://pagure.io/fedora-infra/ansible).
+
+The application can be deployed by people with appropriate permissions by
+executing:
+
+```
+[localhost]$ ssh batcave01.iad2.fedoraproject.org
+[batcave01]$ sudo rbac-playbook openshift-apps/coreos-ostree-importer.yml
+```
+
+The application will then be running in Fedora OpenShift instances:
+
+- [PROD](https://os.fedoraproject.org/console/project/coreos-ostree-importer/)
+- [STAGE](https://os.stg.fedoraproject.org/console/project/coreos-ostree-importer/)
+
+If you have appropriate permissions you'll be able to view them in the
+OpenShift web interface.
+
+To limit executing playbooks against `prod` or `staging` you can use
+`-l os_masters[0]` or `-l os_masters_stg[0]`.
+
+To take down the application completely:
+
+```
+[localhost]$ ssh batcave01.iad2.fedoraproject.org
+[batcave01]$ sudo rbac-playbook -t delete openshift-apps/coreos-ostree-importer.yml
+```
+
 # Rough notes for running locally:
 
 If you'd like to use a local rabbitmq server setup you'll need to modify the
