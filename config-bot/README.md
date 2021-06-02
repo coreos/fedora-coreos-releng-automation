@@ -46,6 +46,10 @@ This app is currently deployed in the same namespace as the
 [Fedora CoreOS production
 pipeline](https://github.com/coreos/fedora-coreos-pipeline).
 
+However, it expects to use a different GitHub token
+(`github-coreosbot-token-config-bot`) which only needs
+`repo:public_repo` scope.
+
 To deploy:
 
 ```
