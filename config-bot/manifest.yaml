@@ -72,7 +72,7 @@ objects:
           volumes:
           - name: github-coreosbot-token
             secret:
-              secretName: github-coreosbot-token
+              secretName: github-coreosbot-token-config-bot
       triggers:
         - type: ConfigChange
         - type: ImageChange
