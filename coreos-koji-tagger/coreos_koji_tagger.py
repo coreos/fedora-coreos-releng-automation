@@ -44,7 +44,7 @@ COREOS_KOJI_USER = 'coreosbot'
 
 # XXX: should be in config file
 DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
-DEFAULT_GITHUB_REPO_BRANCHES = 'refs/heads/testing-devel refs/heads/next-devel refs/heads/rawhide'
+DEFAULT_GITHUB_REPO_BRANCHES = 'refs/heads/testing-devel refs/heads/next-devel refs/heads/rawhide  refs/heads/branched'
 
 ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
