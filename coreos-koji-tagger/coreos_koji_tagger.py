@@ -44,7 +44,7 @@ COREOS_KOJI_USER = 'coreosbot'
 
 # XXX: should be in config file
 DEFAULT_GITHUB_REPO_FULLNAME = 'coreos/fedora-coreos-config'
-DEFAULT_GITHUB_REPO_BRANCHES = 'refs/heads/testing-devel refs/heads/next-devel refs/heads/rawhide  refs/heads/branched'
+DEFAULT_GITHUB_REPO_BRANCHES = 'testing-devel next-devel rawhide branched'
 
 ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
@@ -269,7 +269,7 @@ class Consumer(object):
 
         # do an initial run on startup in case we're out of sync
         for branch in self.github_repo_branches:
-            self.process_lockfiles(branch[len("refs/heads/"):])
+            self.process_lockfiles(branch)
 
 
     def __call__(self, message: fedora_messaging.api.Message):
@@ -289,7 +289,7 @@ class Consumer(object):
             logger.info(f'Skipping message from unrelated repo: {repo}')
             return
 
-        if (branch not in self.github_repo_branches):
+        if (branch[len("refs/heads/"):] not in self.github_repo_branches):
             logger.info(f'Skipping message from unrelated branch: {branch}')
             return
 
