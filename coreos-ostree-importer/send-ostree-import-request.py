@@ -28,7 +28,7 @@ OSTREE_IMPORTER_REQUEST_TIMEOUT_SEC = 15 * 60
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--build", help="Build ID", default="latest")
+    parser.add_argument("--build", help="Build ID", required=True)
     parser.add_argument(
         "--arch", help="target architecture", default=get_basearch()
     )
@@ -57,6 +57,8 @@ def parse_args():
 
 
 def send_ostree_import_request(args):
+    if args.build == 'latest':
+        raise Exception("Refusing to ostree import generic 'latest' build ID")
     build = GenericBuildMeta(build=args.build, basearch=args.arch)
 
     bucket, prefix = get_bucket_and_prefix(args.s3)
