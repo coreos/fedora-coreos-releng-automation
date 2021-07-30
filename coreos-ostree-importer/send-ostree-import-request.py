@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, '/usr/lib/coreos-assembler')
 from cosalib.meta import GenericBuildMeta
 from cosalib.fedora_messaging_request import send_request_and_wait_for_response
+from cosalib.cmdlib import get_basearch
 
 # Example datagrepper URLs to inspect sent messages:
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.build.request.ostree-import&delta=100000
@@ -27,7 +28,10 @@ OSTREE_IMPORTER_REQUEST_TIMEOUT_SEC = 15 * 60
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--build", help="Build ID", default="latest")
+    parser.add_argument("--build", help="Build ID", required=True)
+    parser.add_argument(
+        "--arch", help="target architecture", default=get_basearch()
+    )
     parser.add_argument(
         "--fedmsg-conf",
         metavar="CONFIG.TOML",
@@ -53,17 +57,17 @@ def parse_args():
 
 
 def send_ostree_import_request(args):
-    buildid = args.build
-    build = GenericBuildMeta(build=buildid)
+    if args.build == 'latest':
+        raise Exception("Refusing to ostree import generic 'latest' build ID")
+    build = GenericBuildMeta(build=args.build, basearch=args.arch)
 
     bucket, prefix = get_bucket_and_prefix(args.s3)
-    basearch = build["coreos-assembler.basearch"]
     environment = "prod"
     if args.stg:
         environment = "stg"
 
     # Example: https://fcos-builds.s3.amazonaws.com/prod/streams/stable/builds/31.20200127.3.0/x86_64/fedora-coreos-31.20200127.3.0-ostree.x86_64.tar
-    commit_url = f"https://{bucket}.s3.amazonaws.com/{prefix}/builds/{buildid}/{basearch}/{build['images']['ostree']['path']}"
+    commit_url = f"https://{bucket}.s3.amazonaws.com/{prefix}/builds/{args.build}/{args.arch}/{build['images']['ostree']['path']}"
 
     response = send_request_and_wait_for_response(
         request_type="ostree-import",
@@ -71,8 +75,8 @@ def send_ostree_import_request(args):
         environment=environment,
         request_timeout=OSTREE_IMPORTER_REQUEST_TIMEOUT_SEC,
         body={
-            "build_id": buildid,
-            "basearch": basearch,
+            "build_id": args.build,
+            "basearch": args.arch,
             "commit_url": commit_url,
             "checksum": "sha256:" + build["images"]["ostree"]["sha256"],
             "ostree_ref": build["ref"],
