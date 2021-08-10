@@ -50,6 +50,7 @@ def parse_args():
 
     stream_release = subparsers.add_parser('stream.release')
     stream_release.add_argument("--build", required=True)
+    stream_release.add_argument("--basearch", required=True)
     stream_release.add_argument("--stream", required=True)
     stream_release.set_defaults(func=msg_stream_release)
 
@@ -85,6 +86,7 @@ def msg_stream_release(args):
         environment=args.environment,
         body={
             "build_id": args.build,
+            "basearch": args.basearch,
             "stream": args.stream,
         },
     )
