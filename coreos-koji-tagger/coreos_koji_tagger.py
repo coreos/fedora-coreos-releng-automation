@@ -423,8 +423,8 @@ class Consumer(object):
                 # Before running distrepo let's wait for all rpms to
                 # pass through signing and make it into the target tag
                 #
-                # If not done in ten minutes then just timeout (60*10s = 10 minutes)
-                for x in range(0, 60):
+                # If not done in thirty minutes then just timeout (60*3*10s = 30 minutes)
+                for x in range(0, 60*3):
                     currentbuildids = self.get_tagged_buildids(self.target_tag)
                     difference = desiredbuildids - currentbuildids
                     if difference:
