@@ -132,7 +132,7 @@ class Consumer(object):
             return
 
         # Import the OSTree commit to the specified repo. We'll use
-        # a temporary directory to untar the repo into.
+        # a temporary directory to unpack the repo into.
         with tempfile.TemporaryDirectory() as tmpdir:
             # If the target repo is the prod repo the commit could
             # already have been imported into the compose repo. If it
@@ -145,7 +145,7 @@ class Consumer(object):
                 source_repo_path = KNOWN_OSTREE_REPOS["compose"]
             else:
                 # Grab the file from a web url and then pull local
-                untar_file_from_url(url=commit_url, tmpdir=tmpdir, sha256sum=sha256sum)
+                unpack_ostree_from_url(url=commit_url, tmpdir=tmpdir, sha256sum=sha256sum)
                 source_repo_path = tmpdir
 
             # variables that are used in sanity checks below
@@ -271,8 +271,8 @@ def get_sha256sum(filepath: str) -> str:
     return h.hexdigest()
 
 
-def untar_file_from_url(url: str, tmpdir: str, sha256sum: str):
-    filename = "ostree.tar"
+def unpack_ostree_from_url(url: str, tmpdir: str, sha256sum: str):
+    filename = "ostree-archive"
     filepath = os.path.join(tmpdir, filename)
 
     # Grab file from the url
@@ -284,9 +284,14 @@ def untar_file_from_url(url: str, tmpdir: str, sha256sum: str):
     if sha256sum != calcuatedsum:
         raise Exception("Checksums do not match: " f"{sha256sum} != {calcuatedsum}")
 
-    # Untar the file into the temporary directory
-    with tarfile.open(filepath) as tar:
-        tar.extractall(path=tmpdir)
+    if url.endswith(".ociarchive"):
+        runcmd(["ostree", "init", "--repo", tmpdir, "--mode=bare-user"])
+        runcmd(["rpm-ostree", "ex-container", "import", "--repo", tmpdir,
+                f"ostree-unverified-image:oci-archive:{filepath}"])
+    else:
+        # Assume tar and untar the file into the temporary directory
+        with tarfile.open(filepath) as tar:
+            tar.extractall(path=tmpdir)
 
 
 def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
