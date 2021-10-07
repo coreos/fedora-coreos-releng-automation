@@ -11,7 +11,7 @@ RUN dnf update -y
 RUN dnf -y install \
         fedora-messaging \
         python-requests  \
-        ostree           \
+        rpm-ostree       \
         strace
 
 # Configure a umask of 0002 which will allow for the group permissions
