@@ -8,10 +8,12 @@ ENV PYTHONUNBUFFERED=true
 RUN dnf update -y
 
 # Install needed rpms
+# skopeo is needed for `rpm-ostree ex-container import`
 RUN dnf -y install \
         fedora-messaging \
         python-requests  \
         rpm-ostree       \
+        skopeo           \
         strace
 
 # Configure a umask of 0002 which will allow for the group permissions
