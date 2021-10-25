@@ -205,26 +205,7 @@ def prune_prod_repo(test=False):
         cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO, '--refs-only']
         if test:
             cmd.append('--no-prune')
-        runcmd(cmd, capture_output=False)
-
-
-# XXX this function should not be used yet as there are a few
-# bugs to work out: 
-# https://github.com/ostreedev/ostree/issues/1479 
-# https://github.com/ostreedev/ostree/issues/1481
-def prune_prod_repo_deltas(test=False):
-
-    logger.info("prune_prod_repo_deltas: this function is disabled until the"
-                "following bugs are fixed:")
-    logger.info("https://github.com/ostreedev/ostree/issues/1479")
-    logger.info("https://github.com/ostreedev/ostree/issues/1481")
-    return
-
-    cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO,
-           '--refs-only', '--static-deltas-only']
-    if test:
-        cmd.append('--no-prune')
-    runcmd(cmd, capture_output=False)
+        runcmd(cmd)
 
 
 def main():
@@ -269,12 +250,6 @@ def main():
             else:
                 logger.info(f"Today is {day}. Sleeping...")
 
-
-    # XXX this function should not be used yet as there are a few
-    # bugs to work out: 
-    # https://github.com/ostreedev/ostree/issues/1479 
-    # https://github.com/ostreedev/ostree/issues/1481
-    #prune_prod_repo_deltas(args.test)
 
 if __name__ == '__main__':
     main()
