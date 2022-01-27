@@ -48,7 +48,16 @@ pipeline](https://github.com/coreos/fedora-coreos-pipeline).
 
 However, it expects to use a different GitHub token
 (`github-coreosbot-token-config-bot`) which only needs
-`repo:public_repo` scope.
+`repo:public_repo` scope. You can find this token in
+BitWarden.
+
+To create the secret:
+
+```
+$ read token
+<token>
+$ oc create secret generic github-coreosbot-token-config-bot --from-literal=token=$token
+```
 
 To deploy:
 
