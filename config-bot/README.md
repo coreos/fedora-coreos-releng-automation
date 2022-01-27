@@ -64,10 +64,3 @@ To deploy:
 ```
 oc new-app --file=manifest.yaml
 ```
-
-Copy the generated GitHub webhook secret, and substitute it
-into the webhook URL from `oc describe bc config-bot`, then
-create a new webhook in the GitHub settings for this repo as
-described in the [OpenShift
-documentation](https://docs.openshift.com/container-platform/4.4/builds/triggering-builds-build-hooks.html#builds-using-github-webhooks_triggering-builds-build-hooks)
-using that URL.
