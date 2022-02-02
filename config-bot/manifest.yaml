@@ -14,10 +14,6 @@ parameters:
   - description: Git branch/tag reference for Dockerfile
     name: REPO_REF
     value: main
-  - description: GitHub webhook secret
-    name: GITHUB_WEBHOOK_SECRET
-    from: '[A-Z0-9]{32}'
-    generate: expression
 objects:
   - kind: ImageStream
     apiVersion: v1
@@ -33,9 +29,6 @@ objects:
     spec:
       triggers:
       - type: ConfigChange
-      - type: GitHub
-        github:
-          secret: ${GITHUB_WEBHOOK_SECRET}
       source:
         type: Git
         git:
