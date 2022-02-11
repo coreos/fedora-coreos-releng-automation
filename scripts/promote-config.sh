@@ -21,8 +21,12 @@ main() {
     local src_branch=$1; shift
     local fetch_head head
 
-    git fetch https://github.com/coreos/fedora-coreos-config "${src_branch}"
-    fetch_head=$(git rev-parse FETCH_HEAD)
+    if [ -z "${LOCAL:-}" ]; then
+        git fetch https://github.com/coreos/fedora-coreos-config "${src_branch}"
+        fetch_head=$(git rev-parse FETCH_HEAD)
+    else
+        fetch_head=$(git rev-parse "${src_branch}")
+    fi
     head=$(git rev-parse HEAD)
 
     # take all the changes from the src branch
