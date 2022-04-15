@@ -171,7 +171,6 @@ def prune_prod_repo(test=False):
             continue
 
     # prune each branch in the policy with specified value
-    deleted_a_ref = False
     for ref,policy in PROD_REF_POLICIES.items():
 
         # Skip if there is no ref in the repo for this policy
@@ -185,27 +184,29 @@ def prune_prod_repo(test=False):
 
         if policy == 'delete':
             delete_ref_in_repo(ref, OSTREEPRODREPO, test)
-            deleted_a_ref = True
             continue
 
         prunearg = pruning_policy_to_args(policy)
 
         logger.info(f'Pruning the {ref} ref in repo {OSTREEPRODREPO} to {policy}')
+        # Use --commit-only so only the commit gets deleted and not related objects
+        # which take time to calculate reachability. We go through and first delete
+        # commits (fast) and then go back at the end and run a single generic delete
+        # prune of any unreachable objects in the repo (slow).
         cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO,
-               '--only-branch', ref, '--refs-only', prunearg]
+               '--commit-only', '--only-branch', ref, '--refs-only', prunearg]
         if test:
             cmd.append('--no-prune')
         runcmd(cmd)
 
-    # If we deleted a ref from the repo then we'll just run a generic
-    # prune to delete any objects in the repo that aren't reachable
-    # via a ref. This should save some time since we only call ostree
-    # prune once, versus for every ref we deleted.
-    if deleted_a_ref:
-        cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO, '--refs-only']
-        if test:
-            cmd.append('--no-prune')
-        runcmd(cmd)
+    # Now run a generic prune once over the entire repo to delete any
+    # objects in the repo that aren't reachable. This should save some
+    # time since we only iterate over the entire repo once, versus for
+    # every ref/commit we deleted.
+    cmd = ['ostree', 'prune', '--repo', OSTREEPRODREPO, '--refs-only']
+    if test:
+        cmd.append('--no-prune')
+    runcmd(cmd)
 
 
 def main():
