@@ -21,14 +21,14 @@ executing:
 
 The application will then be running in Fedora OpenShift instances:
 
-- [PROD](https://os.fedoraproject.org/console/project/coreos-ostree-importer/)
-- [STAGE](https://os.stg.fedoraproject.org/console/project/coreos-ostree-importer/)
+- [PROD](https://console-openshift-console.apps.ocp.fedoraproject.org/k8s/cluster/projects/coreos-ostree-importer)
+- [STAGE](https://console-openshift-console.apps.ocp.stg.fedoraproject.org/k8s/cluster/projects/coreos-ostree-importer)
 
 If you have appropriate permissions you'll be able to view them in the
 OpenShift web interface.
 
 To limit executing playbooks against `prod` or `staging` you can use
-`-l os_masters[0]` or `-l os_masters_stg[0]`.
+`-l os_control` or `-l os_control_stg`.
 
 To take down the application completely:
 
