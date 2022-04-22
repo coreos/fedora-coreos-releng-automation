@@ -20,14 +20,14 @@ executing:
 
 The application will then be running in Fedora OpenShift instances:
 
-- [PROD](https://os.fedoraproject.org/console/project/coreos-koji-tagger/)
-- [STAGE](https://os.stg.fedoraproject.org/console/project/coreos-koji-tagger/)
+- [PROD](https://console-openshift-console.apps.ocp.fedoraproject.org/k8s/cluster/projects/coreos-koji-tagger)
+- [STAGE](https://console-openshift-console.apps.ocp.stg.fedoraproject.org/k8s/cluster/projects/coreos-koji-tagger)
 
 If you have appropriate permissions you'll be able to view them in the
 OpenShift web interface.
 
 To limit executing playbooks against `prod` or `staging` you can use
-`-l os_masters[0]` or `-l os_masters_stg[0]`.
+`-l os_control` or `-l os_control_stg`.
 
 To take down the application completely:
 
@@ -46,7 +46,7 @@ there are two inputs which you can control:
 
 In order to update the source code you need to push to the repo/branch
 currently being monitored by the
-[the buildconfig](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml).
+[the buildconfig](https://pagure.io/fedora-infra/ansible/blob/main/f/roles/openshift-apps/coreos-koji-tagger/templates/buildconfig.yml).
 for the staging environment. This will most likely be the
 `fedora-infra-staging` branch of this git repo.
 
@@ -55,7 +55,7 @@ in stage you need to push code to the repo/branch currently being monitored
 by the staging coreos-koji-tagger. This involves changing the manifest file(s)
 and pushing to the git repo. To see the branch/repo currently being
 monitored you can see that in the
-[deploymentconfig](https://infrastructure.fedoraproject.org/cgit/ansible.git/tree/roles/openshift-apps/coreos-koji-tagger/templates/deploymentconfig.yml).
+[deploymentconfig](https://pagure.io/fedora-infra/ansible/blob/main/f/roles/openshift-apps/coreos-koji-tagger/templates/deploymentconfig.yml).
 
 You'll need to either push to the target branch/repo or you'll need to
 update the deploymentconfig to point to another one that you control. The
