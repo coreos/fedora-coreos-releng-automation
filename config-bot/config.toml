@@ -39,6 +39,9 @@ skip-files = [
     'manifest.yaml',
     'manifest-lock.*',
     'image.yaml',
+    # Temporary exclusion to allow 'next' to diverge
+    # https://github.com/coreos/fedora-coreos-tracker/issues/567#issuecomment-1150275044
+    'platforms.yaml',
 ]
 trigger.mode = 'periodic'
 trigger.period = '15m'
