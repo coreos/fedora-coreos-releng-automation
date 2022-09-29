@@ -135,19 +135,15 @@ You'll have to update the body with new information you'd like to use. Then run:
 
 ## Fedora Messaging sender from the Fedora CoreOS Pipeline
 
-Included in this directory is a file (`send-ostree-import-request.py`)
-that is not used by the `coreos-ostree-importer`
-at all. It is used by the
-[Fedora CoreOS Pipeline](https://github.com/coreos/fedora-coreos-pipeline.git)
-to send the request to the importer. It made sense to co-locate the
-requester and importer in the same code repo/directory.
+In the coreos-assembler repo, you will find a script called
+[`fedmsg-send-ostree-import-request`](https://github.com/coreos/coreos-assembler/blob/main/src/fedmsg-send-ostree-import-request).
+It is used by the [Fedora CoreOS Pipeline](https://github.com/coreos/fedora-coreos-pipeline.git) to send the request to the importer.
 
-Here's how you might send a request using `fcos-pipeline-ostree-import-request.py`: 
-
+Here's how you might send a request using `fedmsg-send-ostree-import-request`:
 
 ```
-cosa buildprep --build=31.20200212.20.0 s3://fcos-builds/prod/streams/testing-devel/builds
-/usr/lib/coreos-assembler/send-ostree-import-request.py \
+cosa buildfetch --build=31.20200212.20.0
+/usr/lib/coreos-assembler/fedmsg-send-ostree-import-request \
         --fedmsg-conf /srv/fedora-messaging-config.toml \
         --build 31.20200212.20.0 --stg \
         --s3 fcos-builds/prod/streams/testing-devel \
