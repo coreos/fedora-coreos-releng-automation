@@ -291,7 +291,26 @@ def unpack_ostree_from_url(url: str, tmpdir: str, sha256sum: str):
     else:
         # Assume tar and untar the file into the temporary directory
         with tarfile.open(filepath) as tar:
-            tar.extractall(path=tmpdir)
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(tar, path=tmpdir)
 
 
 def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
