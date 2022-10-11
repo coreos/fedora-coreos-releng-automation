@@ -284,14 +284,9 @@ def unpack_ostree_from_url(url: str, tmpdir: str, sha256sum: str):
     if sha256sum != calcuatedsum:
         raise Exception("Checksums do not match: " f"{sha256sum} != {calcuatedsum}")
 
-    if url.endswith(".ociarchive"):
-        runcmd(["ostree", "init", "--repo", tmpdir, "--mode=bare-user"])
-        runcmd(["rpm-ostree", "ex-container", "import", "--repo", tmpdir,
-                f"ostree-unverified-image:oci-archive:{filepath}"])
-    else:
-        # Assume tar and untar the file into the temporary directory
-        with tarfile.open(filepath) as tar:
-            tar.extractall(path=tmpdir)
+    runcmd(["ostree", "init", "--repo", tmpdir, "--mode=bare-user"])
+    runcmd(["rpm-ostree", "ex-container", "import", "--repo", tmpdir,
+            f"ostree-unverified-image:oci-archive:{filepath}"])
 
 
 def ostree_pull_local(srcrepo: str, dstrepo: str, branch: str, commit: str):
