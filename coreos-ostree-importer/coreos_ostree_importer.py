@@ -285,7 +285,7 @@ def unpack_ostree_from_url(url: str, tmpdir: str, sha256sum: str):
         raise Exception("Checksums do not match: " f"{sha256sum} != {calcuatedsum}")
 
     runcmd(["ostree", "init", "--repo", tmpdir, "--mode=bare-user"])
-    runcmd(["rpm-ostree", "ex-container", "import", "--repo", tmpdir,
+    runcmd(["ostree", "container", "unencapsulate", "--repo", tmpdir,
             f"ostree-unverified-image:oci-archive:{filepath}"])
 
 
