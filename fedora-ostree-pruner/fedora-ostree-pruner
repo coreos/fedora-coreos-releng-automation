@@ -16,6 +16,7 @@ import os
 import pprint
 import subprocess
 import time
+import traceback
 
 
 logformat = "%(asctime)s %(levelname)s %(name)s - %(message)s"
@@ -139,6 +140,7 @@ def delete_ref_in_repo(ref: str, repo: str, test: bool):
     runcmd(cmd)
 
 
+@catch_exceptions_and_continue
 def prune_compose_repo(test=False):
     # prune the compose repo
     logger.info(f'Pruning the compose repo {OSTREECOMPOSEREPO}'
@@ -151,6 +153,7 @@ def prune_compose_repo(test=False):
     runcmd(cmd)
 
 
+@catch_exceptions_and_continue
 def prune_prod_repo(test=False):
     # Error out if any refs exist that aren't defined in the policy
     cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO]
@@ -207,6 +210,25 @@ def prune_prod_repo(test=False):
     if test:
         cmd.append('--no-prune')
     runcmd(cmd)
+
+
+def catch_exceptions_and_continue(func):
+    # This is a decorator function that will re-call the decorated
+    # function and will catch any exceptions and not raise them further.
+    # We want to do this because if we raise exceptions it will cause
+    # the process to exit and we'll lose the traceback logs from the
+    # container.
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error('Caught Exception!')
+            logger.error('###################################')
+            traceback.print_exc()
+            logger.error('###################################')
+            logger.error('\t continuing...')
+            pass
+    return wrapper
 
 
 def main():
