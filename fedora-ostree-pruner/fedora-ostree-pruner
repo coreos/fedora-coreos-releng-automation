@@ -90,6 +90,25 @@ for arch in FEDORA_COREOS_ARCHES:
         PROD_REF_POLICIES[f'fedora/{arch}/coreos/{stream}'] = None
 
 
+def catch_exceptions_and_continue(func):
+    # This is a decorator function that will re-call the decorated
+    # function and will catch any exceptions and not raise them further.
+    # We want to do this because if we raise exceptions it will cause
+    # the process to exit and we'll lose the traceback logs from the
+    # container.
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error('Caught Exception!')
+            logger.error('###################################')
+            traceback.print_exc()
+            logger.error('###################################')
+            logger.error('\t continuing...')
+            pass
+    return wrapper
+
+
 # Beneath this is code, no config needed here
 def runcmd(cmd: list, **kwargs: int) -> subprocess.CompletedProcess:
     # Default to not capture output, check=True, shell=False
@@ -210,25 +229,6 @@ def prune_prod_repo(test=False):
     if test:
         cmd.append('--no-prune')
     runcmd(cmd)
-
-
-def catch_exceptions_and_continue(func):
-    # This is a decorator function that will re-call the decorated
-    # function and will catch any exceptions and not raise them further.
-    # We want to do this because if we raise exceptions it will cause
-    # the process to exit and we'll lose the traceback logs from the
-    # container.
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logger.error('Caught Exception!')
-            logger.error('###################################')
-            traceback.print_exc()
-            logger.error('###################################')
-            logger.error('\t continuing...')
-            pass
-    return wrapper
 
 
 def main():
