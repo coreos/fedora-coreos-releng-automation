@@ -26,8 +26,6 @@ logger = logging.getLogger('fedora-ostree-pruner')
 # The location of our two unified ostree repos
 OSTREECOMPOSEREPO = '/mnt/koji/compose/ostree/repo'
 OSTREEPRODREPO = '/mnt/koji/ostree/repo'
-OSTREECOMPOSEREPO = '/mnt/fedora_koji_prod/koji/compose/ostree/repo'
-OSTREEPRODREPO = '/mnt/fedora_koji_prod/koji/ostree/repo'
 
 FEDORA_STABLE_LIST = [35, 36, 37]
 FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34]
