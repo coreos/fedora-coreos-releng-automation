@@ -4,6 +4,6 @@ cosaPod(runAsUser: 0) {
     checkout scm
     // required by config-bot (XXX: should have a deps.txt file for each
     // subproject or something)
-    shwrap("dnf install -y python3-aiohttp")
+    shwrap("dnf install -y python3-aiohttp python3-toml")
     shwrap("./run-pylint")
 }
