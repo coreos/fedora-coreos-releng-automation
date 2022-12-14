@@ -237,11 +237,6 @@ def main():
                         help="Loop forever, run once a week.", action='store_true')
     args = parser.parse_args()
 
-    # set args.test = True for now. Once we have proved
-    # everything out in prod and the logs look good we'll
-    # delete this code.
-    args.test = True
-
     # on startup let's print out the config that was generated
     logger.info('The configured policy is: \n%s' %
                 pprint.pformat(PROD_REF_POLICIES, indent=8))
@@ -255,7 +250,8 @@ def main():
 
     # Prune the compose and the prod repo based on policy
     prune_compose_repo(args.test)
-    prune_prod_repo(args.test)
+    # wait to prune the prod repo til after the 2022 holidays
+    #prune_prod_repo(args.test)
 
     # If we were asked to run in a loop, then run once a week on
     # Saturday.
@@ -267,7 +263,8 @@ def main():
             day = days[datetime.date.today().weekday()]
             if day == 'Saturday':
                 prune_compose_repo(args.test)
-                prune_prod_repo(args.test)
+                # wait to prune the prod repo til after the 2022 holidays
+                #prune_prod_repo(args.test)
             else:
                 logger.info(f"Today is {day}. Sleeping...")
 
