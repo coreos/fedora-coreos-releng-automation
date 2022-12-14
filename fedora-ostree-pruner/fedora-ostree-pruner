@@ -32,7 +32,7 @@ FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34]
 
 ATOMIC_HOST_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
 SILVERBLUE_ARCHES = ['x86_64', 'aarch64', 'ppc64le']  # Applies to Kinoite
-FEDORA_COREOS_ARCHES = ['x86_64', 'aarch64']
+FEDORA_COREOS_ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
 # https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md#introduction
 FEDORA_COREOS_PRODUCTION_STREAMS = ['next', 'testing', 'stable']
