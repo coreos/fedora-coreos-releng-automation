@@ -248,16 +248,11 @@ def main():
     # See https://pagure.io/releng/issue/8811#comment-616490
     os.umask(0o0002)
 
-    # Prune the compose and the prod repo based on policy
-    prune_compose_repo(args.test)
-    prune_prod_repo(args.test)
-
     # If we were asked to run in a loop, then run once a week on
     # Saturday.
     days = "Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split()
     if args.loop:
         while True:
-            time.sleep(60*60*24)  # 24h
             # If it's Saturday, run the prune
             day = days[datetime.date.today().weekday()]
             if day == 'Saturday':
@@ -265,6 +260,11 @@ def main():
                 prune_prod_repo(args.test)
             else:
                 logger.info(f"Today is {day}. Sleeping...")
+            time.sleep(60*60*24)  # 24h
+    else:
+        prune_compose_repo(args.test)
+        prune_prod_repo(args.test)
+
 
 
 if __name__ == '__main__':
