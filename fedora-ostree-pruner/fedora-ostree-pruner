@@ -250,8 +250,7 @@ def main():
 
     # Prune the compose and the prod repo based on policy
     prune_compose_repo(args.test)
-    # wait to prune the prod repo til after the 2022 holidays
-    #prune_prod_repo(args.test)
+    prune_prod_repo(args.test)
 
     # If we were asked to run in a loop, then run once a week on
     # Saturday.
@@ -263,8 +262,7 @@ def main():
             day = days[datetime.date.today().weekday()]
             if day == 'Saturday':
                 prune_compose_repo(args.test)
-                # wait to prune the prod repo til after the 2022 holidays
-                #prune_prod_repo(args.test)
+                prune_prod_repo(args.test)
             else:
                 logger.info(f"Today is {day}. Sleeping...")
 
