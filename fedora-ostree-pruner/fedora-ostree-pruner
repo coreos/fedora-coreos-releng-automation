@@ -199,7 +199,12 @@ def prune_prod_repo(test=False):
 
         if policy is None:
             logger.info(f'Skipping ref {ref} in repo {OSTREEPRODREPO}.'
-                        'Policy is to keep all commits.')
+                        ' Policy is to keep all commits.')
+            continue
+
+        # Detect if the ref is an alias (they are symlinks) and skip if so.
+        if os.path.islink(f'{OSTREEPRODREPO}/refs/heads/{ref}'):
+            logger.info(f'Skipping operations on alias {ref} in repo {OSTREEPRODREPO}.')
             continue
 
         if policy == 'delete':
