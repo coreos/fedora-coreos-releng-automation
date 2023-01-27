@@ -190,11 +190,6 @@ def prune_prod_repo(test=False):
                                f' repo {OSTREEPRODREPO}: {ref}')
             continue
 
-    # Get the list of aliased refs in the repo
-    cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO, '--alias']
-    cp = runcmd(cmd, capture_output=True)
-    prod_ref_aliases = [line.split(' ')[0] for line in cp.stdout.decode('utf-8').splitlines()]
-
     # prune each branch in the policy with specified value
     for ref,policy in PROD_REF_POLICIES.items():
 
@@ -207,7 +202,8 @@ def prune_prod_repo(test=False):
                         ' Policy is to keep all commits.')
             continue
 
-        if ref in prod_ref_aliases:
+        # Detect if the ref is an alias (they are symlinks) and skip if so.
+        if os.path.islink(f'{OSTREEPRODREPO}/refs/heads/{ref}'):
             logger.info(f'Skipping operations on alias {ref} in repo {OSTREEPRODREPO}.')
             continue
 
