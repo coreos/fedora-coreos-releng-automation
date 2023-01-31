@@ -7,8 +7,8 @@ ENV PYTHONUNBUFFERED=true
 # Get any latest updates since last container spin
 RUN dnf update -y
 
-# Install ostree
-RUN dnf -y install ostree
+# Install ostree/dumb-init
+RUN dnf -y install ostree dumb-init
 
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
@@ -25,5 +25,5 @@ RUN echo 'umask 0002' > /etc/profile.d/umask-for-openshift.sh
 # Put the file into typical place for execuatables
 ADD fedora-ostree-pruner /usr/local/bin/
 
-# Call the pruner and tell it to loop
-CMD ["/usr/local/bin/fedora-ostree-pruner", "--loop"]
+# Use dumb-init (reaps defunct processes) to call the pruner
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/fedora-ostree-pruner", "--loop"]

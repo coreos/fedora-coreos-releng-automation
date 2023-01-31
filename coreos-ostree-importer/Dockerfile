@@ -10,6 +10,7 @@ RUN dnf update -y
 # Install needed rpms
 # skopeo is needed for `rpm-ostree ex-container import`
 RUN dnf -y install \
+        dumb-init        \
         fedora-messaging \
         python-requests  \
         rpm-ostree       \
@@ -38,5 +39,5 @@ ADD fedora-messaging-config.toml /etc/fedora-messaging/config.toml
 # Copy in the wrapper that starts the importer
 ADD coreos-ostree-importer-wrapper /usr/local/bin/
 
-# Call the wrapper
-CMD ["/usr/local/bin/coreos-ostree-importer-wrapper"]
+# Use dumb-init (reaps defunct processes) to call the importer
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/coreos-ostree-importer-wrapper"]
