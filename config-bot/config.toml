@@ -34,6 +34,7 @@ target-refs = [
     'next-devel',
     'branched',
     'rawhide',
+    'experimental',
 ]
 skip-files = [
     'manifest.yaml',
