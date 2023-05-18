@@ -34,7 +34,10 @@ target-refs = [
     'next-devel',
     'branched',
     'rawhide',
+    'experimental',
 ]
+# Files to not clobber in target refs.
+# Ref-specific skip files can be specified in `.coreos.skip-files`.
 skip-files = [
     'manifest.yaml',
     'manifest-lock.*',

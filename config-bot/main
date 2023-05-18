@@ -20,6 +20,7 @@ logging.basicConfig(
 
 
 DEFAULT_CONFIG_FILE_PATH = "/etc/config-bot.toml"
+REF_LEVEL_SKIP_FILES = ".coreos.skip-files"
 
 git = None
 
@@ -270,6 +271,21 @@ async def propagate_files(cfg):
             for target_ref in target_refs:
                 git.checkout(target_ref)
 
+                ref_skip_files = []
+                try:
+                    ref_skip_files_fn = git.path(REF_LEVEL_SKIP_FILES)
+                    with open(ref_skip_files_fn, encoding='utf-8') as f:
+                        ref_skip_files = f.read().splitlines()
+                    # filter out blank lines and comments
+                    ref_skip_files = [fn for fn in ref_skip_files
+                                      if len(fn) and not fn.startswith("#")]
+                    # the skip-file itself is always skipped
+                    ref_skip_files += [REF_LEVEL_SKIP_FILES]
+                except FileNotFoundError:
+                    pass
+
+                ref_skip_files += skip_files
+
                 # We want the same semantics as `rsync --delete`, i.e. delete
                 # files in the target ref no longer in the source ref. We'll do
                 # this by first deleting all the files, then importing the new
@@ -277,7 +293,7 @@ async def propagate_files(cfg):
                 all_files = git.cmd_output('ls-tree', target_ref,
                                            '--name-only').splitlines()
                 files_to_delete = [f for f in all_files
-                                   if not matches_patterns(f, skip_files)]
+                                   if not matches_patterns(f, ref_skip_files)]
 
                 git.cmd('rm', '-r', '--', *files_to_delete)
                 git.cmd('checkout', source_ref, '--', *files_to_import)
