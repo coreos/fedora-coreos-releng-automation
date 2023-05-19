@@ -27,12 +27,14 @@ logger = logging.getLogger('fedora-ostree-pruner')
 OSTREECOMPOSEREPO = '/mnt/koji/compose/ostree/repo'
 OSTREEPRODREPO = '/mnt/koji/ostree/repo'
 
-FEDORA_STABLE_LIST = [35, 36, 37]
-FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34]
+FEDORA_STABLE_LIST = [37, 38]
+FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
 
 ATOMIC_HOST_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
-SILVERBLUE_ARCHES = ['x86_64', 'aarch64', 'ppc64le']  # Applies to Kinoite
+SILVERBLUE_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
 FEDORA_COREOS_ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
+
+SILVERBLUE_VARIANTS = ['silverblue', 'kinoite', 'sericea']
 
 # https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md#introduction
 FEDORA_COREOS_PRODUCTION_STREAMS = ['next', 'testing', 'stable']
@@ -47,29 +49,23 @@ COMPOSE_REPO_POLICY = 'time:90'
 #   - depth:$depth -> Depth of commit history to keep
 PROD_REF_POLICIES = dict()
 for arch in SILVERBLUE_ARCHES:
-    # Keep only the last 180 days of rawhide Silverblue/Kinoite
-    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/silverblue']  = 'time:180'
-    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/kinoite']     = 'time:180'
-    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/workstation'] = 'delete'
-    # For Silverblue/Kinoite stable keep all stable/updates (they are aliased).
-    # For testing, keep just the last 90 days.
-    for release in FEDORA_STABLE_LIST:
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/silverblue']         = None
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/silverblue'] = None
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/silverblue'] = 'time:90'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/kinoite']         = None
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/kinoite'] = None
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/kinoite'] = 'time:90'
-    # For EOL Silverblue/Kinoite since the updates ref and stable ref are aliased
-    # we'll specify depth of 1 for both of those.
-    for release in FEDORA_EOL_LIST:
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/silverblue']         = 'depth:0'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/silverblue'] = 'depth:0'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/silverblue'] = 'delete'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/kinoite']         = 'depth:0'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/kinoite'] = 'depth:0'
-        PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/kinoite'] = 'delete'
+    for v in SILVERBLUE_VARIANTS:
+        # Keep only the last 180 days of rawhide Silverblue*
+        PROD_REF_POLICIES[f'fedora/rawhide/{arch}/{v}']     = 'time:180'
+        # For Silverblue variants keep all stable/updates (they are aliased).
+        # For testing, keep just the last 90 days.
+        for release in FEDORA_STABLE_LIST:
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/{v}']         = None
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/{v}'] = None
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/{v}'] = 'time:90'
+        # For EOL Silverblue variants the updates ref and stable ref are aliased
+        # so we'll keep 1 commit for both of those.
+        for release in FEDORA_EOL_LIST:
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/{v}']         = 'depth:0'
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/{v}'] = 'depth:0'
+            PROD_REF_POLICIES[f'fedora/{release}/{arch}/testing/{v}'] = 'delete'
     # Delete any references to Atomic Workstation
+    PROD_REF_POLICIES[f'fedora/rawhide/{arch}/workstation'] = 'delete'
     for release in FEDORA_EOL_LIST:
         PROD_REF_POLICIES[f'fedora/{release}/{arch}/workstation'] = 'delete'
         PROD_REF_POLICIES[f'fedora/{release}/{arch}/updates/workstation'] = 'delete'
