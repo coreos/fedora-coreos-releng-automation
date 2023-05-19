@@ -250,13 +250,13 @@ def main():
     os.umask(0o0002)
 
     # If we were asked to run in a loop, then run once a week on
-    # Saturday.
+    # Friday.
     days = "Monday Tuesday Wednesday Thursday Friday Saturday Sunday".split()
     if args.loop:
         while True:
-            # If it's Saturday, run the prune
+            # If it's Friday, run the prune
             day = days[datetime.date.today().weekday()]
-            if day == 'Saturday':
+            if day == 'Friday':
                 prune_compose_repo(args.test)
                 prune_prod_repo(args.test)
             else:
