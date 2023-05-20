@@ -259,6 +259,7 @@ def main():
             if day == 'Saturday':
                 prune_compose_repo(args.test)
                 prune_prod_repo(args.test)
+                logger.info(f"Finished pruning operations.")
             else:
                 logger.info(f"Today is {day}. Sleeping...")
             time.sleep(60*60*24)  # 24h
