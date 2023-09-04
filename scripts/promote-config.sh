@@ -38,7 +38,7 @@ main() {
 
     # also strip out the snoozes and warns in the denylist because we don't
     # want changes in the executed tests over time for production streams
-    sed -E -i 's/^(\s+)((snooze:|warn:)\s+.*)/\1# \2 (disabled on promotion)/'
+    sed -E -i 's/^(\s+)((snooze:|warn:)\s+.*)/\1# \2 (disabled on promotion)/' kola-denylist.yaml
 
     git add -A
     if git diff --quiet --staged --exit-code; then
