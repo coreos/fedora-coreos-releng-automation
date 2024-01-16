@@ -311,13 +311,6 @@ class Consumer(object):
             logger.error('No commit id in message!')
             return
 
-        # Check the login. If it's bad then a koji.AuthError exception will get thrown.
-        # and we'll exit because catch_exceptions_and_continue() will raise it.
-        # This is the only way we've come up with to deal with the problem in
-        # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
-        if self.keytab_file:
-            self.koji_client.getLoggedInUser()
-
         self.process_git_lockfiles(commit)
 
     @catch_exceptions_and_continue
@@ -353,6 +346,13 @@ class Consumer(object):
         self.tag_rpms(desiredrpms)
 
     def tag_rpms(self, desiredrpms):
+
+        # Check the login. If it's bad then a koji.AuthError exception will get thrown.
+        # and we'll exit because catch_exceptions_and_continue() will raise it.
+        # This is the only way we've come up with to deal with the problem in
+        # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
+        if self.keytab_file:
+            self.koji_client.getLoggedInUser()
 
         # NOMENCLATURE:
         # 
