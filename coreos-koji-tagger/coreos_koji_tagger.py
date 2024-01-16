@@ -50,7 +50,7 @@ ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
-EXAMPLE_MESSAGE_BODY = json.loads("""
+EXAMPLE_GITHUB_PUSH_MESSAGE_BODY = json.loads("""
 {
     "forced": false, 
     "compare": "https://github.com/coreos/fedora-coreos-config/compare/d6c02b5cd107...6a53f43af882", 
@@ -269,7 +269,7 @@ class Consumer(object):
 
         # do an initial run on startup in case we're out of sync
         for branch in self.github_repo_branches:
-            self.process_lockfiles(branch)
+            self.process_git_lockfiles(branch)
 
 
     def __call__(self, message: fedora_messaging.api.Message):
@@ -280,6 +280,15 @@ class Consumer(object):
         logger.debug(message.topic)
         logger.debug(message.body)
 
+        if message.topic == 'org.fedoraproject.prod.github.push':
+            self.process_github_push_message(message)
+        else:
+            # that's weird, we shouldn't have been called for any other topic
+            # just log it and ignore
+            logger.info(f'Ignoring message on topic: {message.topic}')
+            return
+
+    def process_github_push_message(self, message: fedora_messaging.api.Message):
         # Grab the raw message body and the status from that
         msg = message.body
         branch = msg['ref']
@@ -309,10 +318,10 @@ class Consumer(object):
         if self.keytab_file:
             self.koji_client.getLoggedInUser()
 
-        self.process_lockfiles(commit)
+        self.process_git_lockfiles(commit)
 
     @catch_exceptions_and_continue
-    def process_lockfiles(self, rev):
+    def process_git_lockfiles(self, rev):
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
 
@@ -340,6 +349,10 @@ class Consumer(object):
                             (self.github_repo_fullname, rev))
             logger.warning('Continuing...')
             return
+
+        self.tag_rpms(desiredrpms)
+
+    def tag_rpms(self, desiredrpms):
 
         # NOMENCLATURE:
         # 
@@ -679,10 +692,11 @@ packages:
         return requests_response
     requests.get = Mock(side_effect=side_effect)
 
-    # Note that the following will call process_lockfiles twice. Once
+    c = Consumer()
+
+    # Note that the following will call process_git_lockfiles twice. Once
     # for startup and once for the fake message we're passing.
     m = fedora_messaging.api.Message(
             topic = 'org.fedoraproject.prod.github.push',
-            body = EXAMPLE_MESSAGE_BODY)
-    c = Consumer()
+            body = EXAMPLE_GITHUB_PUSH_MESSAGE_BODY)
     c.__call__(m)
