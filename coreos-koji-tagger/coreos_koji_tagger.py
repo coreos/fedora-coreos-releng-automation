@@ -186,6 +186,16 @@ EXAMPLE_GITHUB_PUSH_MESSAGE_BODY = json.loads("""
 """
 )
 
+# We also process the org.fedoraproject.prod.coreos.stream.release topic
+# https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.stream.release&delta=100000
+EXAMPLE_COREOS_STREAM_RELEASE_MESSAGE_BODY = json.loads("""
+{
+    "basearches": ["x86_64", "s390x", "ppc64le"],
+    "build_id": "40.20240113.91.1",
+    "stream": "rawhide"
+}
+""")
+
 def catch_exceptions_and_continue(func):
     # This is a decorator function that will re-call the decorated
     # function and will catch any exceptions and not raise them further.
@@ -282,6 +292,8 @@ class Consumer(object):
 
         if message.topic == 'org.fedoraproject.prod.github.push':
             self.process_github_push_message(message)
+        elif message.topic == 'org.fedoraproject.prod.coreos.stream.release':
+            self.process_coreos_stream_release_message(message)
         else:
             # that's weird, we shouldn't have been called for any other topic
             # just log it and ignore
@@ -313,6 +325,22 @@ class Consumer(object):
 
         self.process_git_lockfiles(commit)
 
+    def process_coreos_stream_release_message(self, message: fedora_messaging.api.Message):
+        msg = message.body
+        stream = msg['stream']
+
+        # we only handle rawhide and branched builds; see
+        # https://github.com/coreos/fedora-coreos-releng-automation/issues/181
+        if stream not in ['rawhide', 'branched']:
+            logger.info(f'Skipping stream release for stream: {stream}')
+            return
+
+        # we'll start emitting a single message with `basearches` in the future
+        basearches = msg.get('basearches') or [msg['basearch']]
+        buildid    = msg['build_id']
+
+        self.process_build_lockfiles(stream, buildid, basearches)
+
     @catch_exceptions_and_continue
     def process_git_lockfiles(self, rev):
         # Now grab lockfile data from the commit we should operate on:
@@ -340,6 +368,28 @@ class Consumer(object):
             logger.warning('No locked RPMs found!')
             logger.warning("Does the repo:ref (%s:%s) have any lockfiles?" %
                             (self.github_repo_fullname, rev))
+            logger.warning('Continuing...')
+            return
+
+        self.tag_rpms(desiredrpms)
+
+    def process_build_lockfiles(self, stream, buildid, basearches):
+        # Now grab lockfile data from the commit we should operate on:
+        desiredrpms = set()
+
+        for basearch in basearches:
+            url = f'https://builds.coreos.fedoraproject.org/prod/streams/{stream}/builds/{buildid}/{basearch}/manifest-lock.generated.{basearch}.json'
+            logger.info(f'Attempting to retrieve data from {url}')
+            r = requests.get(url)
+            if r.ok:
+                # parse the lockfile and add the set of rpm NEVRAs (strings)
+                desiredrpms.update(parse_lockfile_data(r.text, 'json'))
+            else:
+                # Log any errors we encounter.
+                logger.warning('URL request error: %s' % r.text.strip())
+        if not desiredrpms:
+            logger.warning('No locked RPMs found!')
+            logger.warning(f"Is the build {buildid} missing its generated lockfile?")
             logger.warning('Continuing...')
             return
 
@@ -678,6 +728,7 @@ packages:
   afterburn-dracut:
     evra: 4.1.1-3.module_f30+4804+1c3d5e42.x86_64
     """
+    sample_lockfile_json = json.dumps(yaml.safe_load(sample_lockfile))
 
     # Make requests.get() return the above sample lockfile
     # for only one of the requested lockfiles. Otherwise 404
@@ -686,6 +737,9 @@ packages:
         if args[0].endswith('lock.x86_64.yaml'):
             requests_response.ok = True
             requests_response.text = sample_lockfile
+        elif 'generated' in args[0]:
+            requests_response.ok = True
+            requests_response.text = sample_lockfile_json
         else:
             requests_response.ok = False
             requests_response.text = "URL request error: 404: Not Found"
@@ -699,4 +753,10 @@ packages:
     m = fedora_messaging.api.Message(
             topic = 'org.fedoraproject.prod.github.push',
             body = EXAMPLE_GITHUB_PUSH_MESSAGE_BODY)
+    c.__call__(m)
+
+    # Now also test rawhide build lockfile scrapping
+    m = fedora_messaging.api.Message(
+            topic = 'org.fedoraproject.prod.coreos.stream.release',
+            body = EXAMPLE_COREOS_STREAM_RELEASE_MESSAGE_BODY)
     c.__call__(m)
