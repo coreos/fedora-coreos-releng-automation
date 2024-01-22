@@ -38,8 +38,8 @@ RUN sed -i 's/INFO/WARNING/' /work/my_config.toml
 # Set the format for the log messages
 RUN sed -i 's/format =.*$/format = "%(asctime)s %(levelname)s %(name)s - %(message)s"/' /work/my_config.toml
 
-# We only care about org.fedoraproject.prod.github.push messages
-RUN sed -i 's/^routing_keys.*$/routing_keys = ["org.fedoraproject.prod.github.push"]/' /work/my_config.toml
+# We only care about these two topics
+RUN sed -i 's/^routing_keys.*$/routing_keys = ["org.fedoraproject.prod.github.push", "org.fedoraproject.prod.coreos.stream.release"]/' /work/my_config.toml
 
 # Add coreos_koji_tagger to the container
 ADD coreos_koji_tagger.py /work/

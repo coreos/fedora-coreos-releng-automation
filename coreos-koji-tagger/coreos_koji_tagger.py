@@ -50,7 +50,7 @@ ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
 # We are processing the org.fedoraproject.prod.github.push topic
 # https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
-EXAMPLE_MESSAGE_BODY = json.loads("""
+EXAMPLE_GITHUB_PUSH_MESSAGE_BODY = json.loads("""
 {
     "forced": false, 
     "compare": "https://github.com/coreos/fedora-coreos-config/compare/d6c02b5cd107...6a53f43af882", 
@@ -186,6 +186,16 @@ EXAMPLE_MESSAGE_BODY = json.loads("""
 """
 )
 
+# We also process the org.fedoraproject.prod.coreos.stream.release topic
+# https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.coreos.stream.release&delta=100000
+EXAMPLE_COREOS_STREAM_RELEASE_MESSAGE_BODY = json.loads("""
+{
+    "basearches": ["x86_64", "s390x", "ppc64le"],
+    "build_id": "40.20240113.91.1",
+    "stream": "rawhide"
+}
+""")
+
 def catch_exceptions_and_continue(func):
     # This is a decorator function that will re-call the decorated
     # function and will catch any exceptions and not raise them further.
@@ -269,7 +279,7 @@ class Consumer(object):
 
         # do an initial run on startup in case we're out of sync
         for branch in self.github_repo_branches:
-            self.process_lockfiles(branch)
+            self.process_git_lockfiles(branch)
 
 
     def __call__(self, message: fedora_messaging.api.Message):
@@ -280,6 +290,17 @@ class Consumer(object):
         logger.debug(message.topic)
         logger.debug(message.body)
 
+        if message.topic == 'org.fedoraproject.prod.github.push':
+            self.process_github_push_message(message)
+        elif message.topic == 'org.fedoraproject.prod.coreos.stream.release':
+            self.process_coreos_stream_release_message(message)
+        else:
+            # that's weird, we shouldn't have been called for any other topic
+            # just log it and ignore
+            logger.info(f'Ignoring message on topic: {message.topic}')
+            return
+
+    def process_github_push_message(self, message: fedora_messaging.api.Message):
         # Grab the raw message body and the status from that
         msg = message.body
         branch = msg['ref']
@@ -302,17 +323,26 @@ class Consumer(object):
             logger.error('No commit id in message!')
             return
 
-        # Check the login. If it's bad then a koji.AuthError exception will get thrown.
-        # and we'll exit because catch_exceptions_and_continue() will raise it.
-        # This is the only way we've come up with to deal with the problem in
-        # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
-        if self.keytab_file:
-            self.koji_client.getLoggedInUser()
+        self.process_git_lockfiles(commit)
 
-        self.process_lockfiles(commit)
+    def process_coreos_stream_release_message(self, message: fedora_messaging.api.Message):
+        msg = message.body
+        stream = msg['stream']
+
+        # we only handle rawhide and branched builds; see
+        # https://github.com/coreos/fedora-coreos-releng-automation/issues/181
+        if stream not in ['rawhide', 'branched']:
+            logger.info(f'Skipping stream release for stream: {stream}')
+            return
+
+        # we'll start emitting a single message with `basearches` in the future
+        basearches = msg.get('basearches') or [msg['basearch']]
+        buildid    = msg['build_id']
+
+        self.process_build_lockfiles(stream, buildid, basearches)
 
     @catch_exceptions_and_continue
-    def process_lockfiles(self, rev):
+    def process_git_lockfiles(self, rev):
         # Now grab lockfile data from the commit we should operate on:
         desiredrpms = set()
 
@@ -340,6 +370,39 @@ class Consumer(object):
                             (self.github_repo_fullname, rev))
             logger.warning('Continuing...')
             return
+
+        self.tag_rpms(desiredrpms)
+
+    def process_build_lockfiles(self, stream, buildid, basearches):
+        # Now grab lockfile data from the commit we should operate on:
+        desiredrpms = set()
+
+        for basearch in basearches:
+            url = f'https://builds.coreos.fedoraproject.org/prod/streams/{stream}/builds/{buildid}/{basearch}/manifest-lock.generated.{basearch}.json'
+            logger.info(f'Attempting to retrieve data from {url}')
+            r = requests.get(url)
+            if r.ok:
+                # parse the lockfile and add the set of rpm NEVRAs (strings)
+                desiredrpms.update(parse_lockfile_data(r.text, 'json'))
+            else:
+                # Log any errors we encounter.
+                logger.warning('URL request error: %s' % r.text.strip())
+        if not desiredrpms:
+            logger.warning('No locked RPMs found!')
+            logger.warning(f"Is the build {buildid} missing its generated lockfile?")
+            logger.warning('Continuing...')
+            return
+
+        self.tag_rpms(desiredrpms)
+
+    def tag_rpms(self, desiredrpms):
+
+        # Check the login. If it's bad then a koji.AuthError exception will get thrown.
+        # and we'll exit because catch_exceptions_and_continue() will raise it.
+        # This is the only way we've come up with to deal with the problem in
+        # https://github.com/coreos/fedora-coreos-releng-automation/issues/70
+        if self.keytab_file:
+            self.koji_client.getLoggedInUser()
 
         # NOMENCLATURE:
         # 
@@ -665,6 +728,7 @@ packages:
   afterburn-dracut:
     evra: 4.1.1-3.module_f30+4804+1c3d5e42.x86_64
     """
+    sample_lockfile_json = json.dumps(yaml.safe_load(sample_lockfile))
 
     # Make requests.get() return the above sample lockfile
     # for only one of the requested lockfiles. Otherwise 404
@@ -673,16 +737,26 @@ packages:
         if args[0].endswith('lock.x86_64.yaml'):
             requests_response.ok = True
             requests_response.text = sample_lockfile
+        elif 'generated' in args[0]:
+            requests_response.ok = True
+            requests_response.text = sample_lockfile_json
         else:
             requests_response.ok = False
             requests_response.text = "URL request error: 404: Not Found"
         return requests_response
     requests.get = Mock(side_effect=side_effect)
 
-    # Note that the following will call process_lockfiles twice. Once
+    c = Consumer()
+
+    # Note that the following will call process_git_lockfiles twice. Once
     # for startup and once for the fake message we're passing.
     m = fedora_messaging.api.Message(
             topic = 'org.fedoraproject.prod.github.push',
-            body = EXAMPLE_MESSAGE_BODY)
-    c = Consumer()
+            body = EXAMPLE_GITHUB_PUSH_MESSAGE_BODY)
+    c.__call__(m)
+
+    # Now also test rawhide build lockfile scrapping
+    m = fedora_messaging.api.Message(
+            topic = 'org.fedoraproject.prod.coreos.stream.release',
+            body = EXAMPLE_COREOS_STREAM_RELEASE_MESSAGE_BODY)
     c.__call__(m)
