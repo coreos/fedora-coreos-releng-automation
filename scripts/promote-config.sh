@@ -29,8 +29,8 @@ main() {
     fi
     head=$(git rev-parse HEAD)
 
-    # take all the changes from the src branch
-    git reset --hard "${fetch_head}"
+    # take all the changes from the src branch, including any submodules
+    git reset --hard "${fetch_head}" --recurse-submodules
     git reset "${head}"
 
     # except for manifest.yaml
@@ -40,7 +40,8 @@ main() {
     # want changes in the executed tests over time for production streams
     sed -E -i 's/^(\s+)((snooze:|warn:)\s+.*)/\1# \2 (disabled on promotion)/' kola-denylist.yaml
 
-    git add -A
+    # Add everything. If we happen to pick up a submodule, it's on purpose, so squash the warning.
+    git -c advice.addEmbeddedRepo=false add -A
     if git diff --quiet --staged --exit-code; then
         echo "nothing to promote! exiting..."
         exit 0
