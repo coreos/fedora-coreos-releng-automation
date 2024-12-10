@@ -84,6 +84,26 @@ for arch in FEDORA_COREOS_ARCHES:
         PROD_REF_POLICIES[f'fedora/{arch}/coreos/{stream}'] = None
 
 
+def perform_repo_checks():
+    # Error out if any refs exist that aren't defined in the policy
+    cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO]
+    cp = runcmd(cmd, capture_output=True)
+    prod_refs = cp.stdout.decode('utf-8').splitlines()
+    for ref in prod_refs:
+        if ref not in PROD_REF_POLICIES:
+            msg = f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined'
+            logger.error(msg)
+            raise Exception(msg)
+
+    # Warn up front for refs that are in the policy but not in the repo
+    for ref, policy in PROD_REF_POLICIES.items():
+        if ref not in prod_refs:
+            if policy != 'delete':
+                logger.warning('Policy defined for a ref that is not in the'
+                               f' repo {OSTREEPRODREPO}: {ref}')
+            continue
+
+
 def catch_exceptions_and_continue(func):
     # This is a decorator function that will re-call the decorated
     # function and will catch any exceptions and not raise them further.
@@ -168,23 +188,8 @@ def prune_compose_repo(test=False):
 
 @catch_exceptions_and_continue
 def prune_prod_repo(test=False):
-    # Error out if any refs exist that aren't defined in the policy
-    cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO]
-    cp = runcmd(cmd, capture_output=True)
-    prod_refs = cp.stdout.decode('utf-8').splitlines()
-    for ref in prod_refs:
-        if ref not in PROD_REF_POLICIES:
-            msg = f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined'
-            logger.error(msg)
-            raise Exception(msg)
-
-    # Warn up front for refs that are in the policy but not in the repo
-    for ref, policy in PROD_REF_POLICIES.items():
-        if ref not in prod_refs:
-            if policy != 'delete':
-                logger.warning('Policy defined for a ref that is not in the'
-                               f' repo {OSTREEPRODREPO}: {ref}')
-            continue
+    # Perform repo checks again right before prune
+    perform_repo_checks()
 
     # prune each branch in the policy with specified value
     for ref,policy in PROD_REF_POLICIES.items():
@@ -248,6 +253,9 @@ def main():
     # which will have different UIDs but the same GID.
     # See https://pagure.io/releng/issue/8811#comment-616490
     os.umask(0o0002)
+
+    # Perform repo checks on initial startup
+    perform_repo_checks()
 
     # If we were asked to run in a loop, then run once a week on
     # Saturday.
