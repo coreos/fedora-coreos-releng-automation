@@ -84,11 +84,15 @@ for arch in FEDORA_COREOS_ARCHES:
         PROD_REF_POLICIES[f'fedora/{arch}/coreos/{stream}'] = None
 
 
-def perform_repo_checks():
-    # Error out if any refs exist that aren't defined in the policy
+def get_prod_refs():
     cmd = ['ostree', 'refs', '--repo', OSTREEPRODREPO]
     cp = runcmd(cmd, capture_output=True)
-    prod_refs = cp.stdout.decode('utf-8').splitlines()
+    return cp.stdout.decode('utf-8').splitlines()
+
+
+def perform_repo_checks():
+    # Error out if any refs exist that aren't defined in the policy
+    prod_refs = get_prod_refs()
     for ref in prod_refs:
         if ref not in PROD_REF_POLICIES:
             msg = f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined'
@@ -190,6 +194,7 @@ def prune_compose_repo(test=False):
 def prune_prod_repo(test=False):
     # Perform repo checks again right before prune
     perform_repo_checks()
+    prod_refs = get_prod_refs()
 
     # prune each branch in the policy with specified value
     for ref,policy in PROD_REF_POLICIES.items():
