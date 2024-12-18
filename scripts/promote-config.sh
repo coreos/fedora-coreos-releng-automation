@@ -30,7 +30,8 @@ main() {
     head=$(git rev-parse HEAD)
 
     # take all the changes from the src branch, including any submodules
-    git reset --hard "${fetch_head}" --recurse-submodules
+    git reset --hard "${fetch_head}"
+    git submodule update --init
     git reset "${head}"
 
     # except for manifest.yaml
