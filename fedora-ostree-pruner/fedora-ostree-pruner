@@ -93,11 +93,14 @@ def get_prod_refs():
 def perform_repo_checks():
     # Error out if any refs exist that aren't defined in the policy
     prod_refs = get_prod_refs()
+    errors = []
     for ref in prod_refs:
         if ref not in PROD_REF_POLICIES:
-            msg = f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined'
-            logger.error(msg)
-            raise Exception(msg)
+            errors.append(f'Ref {ref} in repo {OSTREEPRODREPO} but no policy defined.')
+    if errors:
+        for error in errors:
+            logger.error(error)
+        raise Exception("Found refs with no policy defined.")
 
     # Warn up front for refs that are in the policy but not in the repo
     for ref, policy in PROD_REF_POLICIES.items():
