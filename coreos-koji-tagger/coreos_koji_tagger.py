@@ -303,6 +303,10 @@ class Consumer(object):
     def process_github_push_message(self, message: fedora_messaging.api.Message):
         # Grab the raw message body and the status from that
         msg = message.body
+        if 'ref' not in msg:
+            logger.error('No ref in message!')
+            logger.error(msg)
+            return
         branch = msg['ref']
         repo   = msg['repository']['full_name']
 
