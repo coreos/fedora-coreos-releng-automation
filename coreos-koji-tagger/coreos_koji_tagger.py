@@ -49,7 +49,7 @@ DEFAULT_GITHUB_REPO_BRANCHES = 'next next-devel testing testing-devel stable raw
 ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
 # We are processing the org.fedoraproject.prod.github.push topic
-# https://apps.fedoraproject.org/datagrepper/raw?topic=org.fedoraproject.prod.github.push&delta=100000
+# https://apps.fedoraproject.org/datagrepper/v2/search?topic=org.fedoraproject.prod.github.push&contains=fedora-coreos-config&delta=100000
 EXAMPLE_GITHUB_PUSH_MESSAGE_BODY = json.loads("""
 {
     "forced": false, 
