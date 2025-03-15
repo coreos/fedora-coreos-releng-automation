@@ -34,7 +34,7 @@ ATOMIC_HOST_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
 ATOMIC_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
 FEDORA_COREOS_ARCHES = ['x86_64', 'aarch64', 'ppc64le', 's390x']
 
-ATOMIC_VARIANTS = ['kinoite', 'onyx', 'sericea', 'silverblue']
+ATOMIC_VARIANTS = ['cosmic-atomic', 'kinoite', 'onyx', 'sericea', 'silverblue']
 
 # https://github.com/coreos/fedora-coreos-tracker/blob/main/stream-tooling.md#introduction
 FEDORA_COREOS_PRODUCTION_STREAMS = ['next', 'testing', 'stable']
