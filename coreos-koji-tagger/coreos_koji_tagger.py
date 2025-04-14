@@ -490,15 +490,15 @@ class Consumer(object):
                 # Before running distrepo let's wait for all rpms to
                 # pass through signing and make it into the target tag
                 #
-                # If not done in thirty minutes then just timeout (60*3*10s = 30 minutes)
-                for x in range(0, 60*3):
+                # If not done in ninety minutes then just timeout # (90*2*30s = 90 minutes)
+                for x in range(0, 90*2):
                     currentbuildids = self.get_tagged_buildids(self.target_tag)
                     difference = desiredbuildids - currentbuildids
                     if difference:
                         logger.info('Waiting on builds to be signed')
                         logger.info('Remaining builds: %s' %
                                         [buildsinfo[x].nvr for x in difference])
-                        time.sleep(10)
+                        time.sleep(30)
                         continue
                     break
                 # If all the builds didn't make it into the target
