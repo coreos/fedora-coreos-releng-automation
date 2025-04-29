@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora:42
+FROM quay.io/fedora/fedora:42
 
 RUN dnf -y install git python3-aiohttp && dnf clean all
 
