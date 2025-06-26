@@ -691,11 +691,11 @@ def parse_lockfile_data(text: str, filetype: str) -> set:
 def get_releasever_from_buildroottag(buildroottag: str) -> str:
     logger.debug(f'Checking buildroottag {buildroottag}')
     if buildroottag.startswith('module-') and buildroottag.endswith('-build'):
-        releasever = re.search('module-.*-(\d\d)[\d]{14}-[a-f0-9]{8}-build$',
+        releasever = re.search(r'module-.*-(\d\d)[\d]{14}-[a-f0-9]{8}-build$',
                                                 buildroottag).group(1)
     else:
         # example: f30-build
-        releasever = re.search('f(\d\d)', buildroottag).group(1)
+        releasever = re.search(r'f(\d\d)', buildroottag).group(1)
     if not releasever:
         raise Exception('Could not derive a releasever for the given'
                        f'buildroot tag: {buildroottag}')
