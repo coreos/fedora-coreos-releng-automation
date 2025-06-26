@@ -23,7 +23,7 @@ RUN mkdir /work
 WORKDIR /work
 
 # Set the Application Name
-RUN sed -i 's|Example Application|CoreOS Koji Tagger: https://github.com/coreos/fedora-coreos-releng-automation/tree/main/coreos-koji-tagger |' /work/my_config.toml
+RUN sed -i 's|Example Application|CoreOS Koji Tagger: https://github.com/coreos/fedora-coreos-releng-automation/tree/main/coreos-koji-tagger |' /etc/fedora-messaging/fedora.toml > /work/my_config.toml
 
 # Lower log levels to WARNING level
 RUN sed -i 's/INFO/WARNING/' /work/my_config.toml
