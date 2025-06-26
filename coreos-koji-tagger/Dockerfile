@@ -8,13 +8,11 @@ ENV PYTHONUNBUFFERED=true
 RUN dnf update -y
 
 # Install necessary (fedmsg/koji/yaml) libraries
-# Include util-linux (upgrade from util-linux-core) for /usr/bin/uuidgen
 RUN dnf -y install dnf-plugins-core \
                    fedora-messaging \
                    koji             \
                    python3-pyyaml   \
-                   krb5-workstation \
-                   util-linux
+                   krb5-workstation
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
@@ -23,13 +21,6 @@ RUN dnf download fedora-packager && rpm -ivh --nodeps fedora-packager*rpm && rm 
 
 RUN mkdir /work
 WORKDIR /work
-
-# Copy the fedora config for fedora-messaging and also generate a random UUID
-# https://fedora-messaging.readthedocs.io/en/latest/fedora-broker.html#getting-connected
-# Note this will mean that if there is more than one container running
-# using this image they will be reading from the same queue. Generally
-# I expect this to only be running in one place.
-RUN sed -e "s/[0-9a-f]\{8\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{4\}-[0-9a-f]\{12\}/$(uuidgen)/g" /etc/fedora-messaging/fedora.toml > /work/my_config.toml
 
 # Set the Application Name
 RUN sed -i 's|Example Application|CoreOS Koji Tagger: https://github.com/coreos/fedora-coreos-releng-automation/tree/main/coreos-koji-tagger |' /work/my_config.toml
