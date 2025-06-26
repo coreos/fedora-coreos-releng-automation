@@ -8,11 +8,13 @@ ENV PYTHONUNBUFFERED=true
 RUN dnf update -y
 
 # Install necessary (fedmsg/koji/yaml) libraries
+# Include util-linux (upgrade from util-linux-core) for /usr/bin/uuidgen
 RUN dnf -y install dnf-plugins-core \
                    fedora-messaging \
                    koji             \
                    python3-pyyaml   \
-                   krb5-workstation
+                   krb5-workstation \
+                   util-linux
 
 # Grab the kerberos/koji configuration (i.e. /usr/bin/stg-koji) by
 # installing the fedora-packager rpm. We don't need the deps because
