@@ -65,9 +65,20 @@ To deploy:
 oc new-app --file=manifest.yaml
 ```
 
-Copy the generated GitHub webhook secret, and substitute it
-into the webhook URL from `oc describe bc config-bot`, then
-create a new webhook in the GitHub settings for this repo as
-described in the [OpenShift
-documentation](https://docs.openshift.com/container-platform/4.4/builds/triggering-builds-build-hooks.html#builds-using-github-webhooks_triggering-builds-build-hooks)
-using that URL.
+To get the generated webhook secret text you can run:
+
+```
+oc get bc/config-bot -o json \
+    | jq -r '.spec.triggers[] | select(.type == "GitHub") | .github.secret'
+```
+
+Now you can get the webhook URL by describing the buildconfig:
+
+```
+oc get bc/config-bot -o json
+```
+
+Then replace the `<secret>` part with the secret above and use
+that resulting URL to create a new webhook in the GitHub settings
+for this repo as described in the
+[OpenShift documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/builds_using_buildconfig/triggering-builds-build-hooks#builds-using-github-webhooks_triggering-builds-build-hooks).
