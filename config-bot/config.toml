@@ -41,6 +41,7 @@ skip-files = [
     'manifest.yaml',
     'manifest-lock.*',
     'image.yaml',
+    'build-args.conf',
 ]
 trigger.mode = 'periodic'
 trigger.period = '15m'
