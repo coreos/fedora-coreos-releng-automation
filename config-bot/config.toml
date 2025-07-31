@@ -42,6 +42,7 @@ skip-files = [
     'manifest-lock.*',
     'image.yaml',
     'build-args.conf',
+    'renovate.json',
 ]
 trigger.mode = 'periodic'
 trigger.period = '15m'
