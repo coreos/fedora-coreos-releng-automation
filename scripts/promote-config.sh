@@ -34,8 +34,8 @@ main() {
     git submodule update --init
     git reset "${head}"
 
-    # except for manifest.yaml
-    git checkout -- manifest.yaml
+    # except for manifest.yaml and build-args.conf
+    git checkout -- manifest.yaml build-args.conf
 
     # also strip out the snoozes and warns in the denylist because we don't
     # want changes in the executed tests over time for production streams
