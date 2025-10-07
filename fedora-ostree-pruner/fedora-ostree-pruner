@@ -27,8 +27,8 @@ logger = logging.getLogger('fedora-ostree-pruner')
 OSTREECOMPOSEREPO = '/mnt/koji/compose/ostree/repo'
 OSTREEPRODREPO = '/mnt/koji/ostree/repo'
 
-FEDORA_STABLE_LIST = [40, 41, 42]
-FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+FEDORA_STABLE_LIST = [41, 42, 43]
+FEDORA_EOL_LIST = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
 
 ATOMIC_HOST_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
 ATOMIC_ARCHES = ['x86_64', 'aarch64', 'ppc64le']
