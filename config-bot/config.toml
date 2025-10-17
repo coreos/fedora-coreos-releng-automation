@@ -40,6 +40,7 @@ target-refs = [
 skip-files = [
     'manifest.yaml',
     'manifest-lock.*',
+    'rpms.lock.yaml',
     'image.yaml',
     'build-args.conf',
     'renovate.json',
