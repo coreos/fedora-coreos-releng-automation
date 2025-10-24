@@ -37,6 +37,12 @@ main() {
     # except for manifest.yaml and build-args.conf
     git checkout -- manifest.yaml build-args.conf
 
+    # take BUILDER_IMG from the src branch version of build-args.conf
+    builder_img=$(git show "${fetch_head}:build-args.conf" | grep '^BUILDER_IMG=')
+
+    # replace that line in the now reverted file to promote only BUILDER_IMG
+    sed -i "s|^BUILDER_IMG=.*|${builder_img}|" build-args.conf
+
     # also strip out the snoozes and warns in the denylist because we don't
     # want changes in the executed tests over time for production streams
     sed -E -i 's/^(\s+)((snooze:|warn:)\s+.*)/\1# \2 (disabled on promotion)/' kola-denylist.yaml
