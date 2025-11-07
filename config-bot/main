@@ -12,6 +12,7 @@ import asyncio
 import argparse
 import tempfile
 import subprocess
+from datetime import datetime, timezone
 
 # Set local logging
 logging.basicConfig(
@@ -299,7 +300,11 @@ async def propagate_files(cfg):
                 git.cmd('checkout', source_ref, '--', *files_to_import)
                 commit = git.cmd_output('rev-parse', source_ref)
 
+                trigger_file_comment="{}/.tekton/trigger-file-comment".format(git._git_work.name)
+                trigger_file="{}/.tekton/trigger".format(git._git_work.name)
                 if git.has_diff():
+                    if update_trigger_file(trigger_file_comment, trigger_file):
+                        git.cmd('add', trigger_file)
                     git.commit(f"tree: import changes from {source_ref} "
                                f"at {commit}")
                     try:
@@ -323,6 +328,26 @@ def period_to_seconds(s):
     assert re.match('^[0-9]+[smh]$', s)
     multi = {"s": 1, "m": 60, "h": 60*60}
     return int(s[:-1]) * multi[s[-1:]]
+
+
+def update_trigger_file(comment_path, trigger_path):
+    """
+    Reads content from the source file containing the comments, write it to
+    the trigger file and then appends the current date in YYYYMMDD format.
+    If there is no file containing the comments, then it writes only the
+    current date.
+    """
+    current_date = datetime.now(timezone.utc).strftime("%Y%m%d")
+    new_content = ""
+    try:
+        with open(comment_path, 'r') as f_source:
+            source_content = f_source.read()
+        new_content = f"{source_content.strip()}\n{current_date}\n"
+    except FileNotFoundError:
+        new_content = f"{current_date}\n"
+    with open(trigger_path, 'w') as f_dest:
+        f_dest.write(new_content)
+    return True
 
 
 class Git:

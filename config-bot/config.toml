@@ -44,6 +44,7 @@ skip-files = [
     'image.yaml',
     'build-args.conf',
     'renovate.json',
+    '.tekton/trigger',
 ]
 trigger.mode = 'periodic'
 trigger.period = '15m'
