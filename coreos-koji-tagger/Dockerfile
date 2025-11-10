@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:42
+FROM quay.io/fedora/fedora:43
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
 # periods with no newline get printed immediately to the screen
