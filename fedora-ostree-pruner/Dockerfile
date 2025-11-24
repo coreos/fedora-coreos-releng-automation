@@ -7,8 +7,8 @@ ENV PYTHONUNBUFFERED=true
 # Get any latest updates since last container spin
 RUN dnf update -y
 
-# Install ostree/dumb-init
-RUN dnf -y install ostree dumb-init
+# Install ostree/dumb-init/python3
+RUN dnf -y install ostree dumb-init python3
 
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
