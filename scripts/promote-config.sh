@@ -29,19 +29,21 @@ main() {
     fi
     head=$(git rev-parse HEAD)
 
+    # Determine the STREAM/DESCRIPTION from the target branch build-args.conf
+    stream=$(git show "${fetch_head}:build-args.conf" | grep '^STREAM=')
+    description=$(git show "${fetch_head}:build-args.conf" | grep '^DESCRIPTION=')
+
     # take all the changes from the src branch, including any submodules
     git reset --hard "${fetch_head}"
     git submodule update --init
     git reset "${head}"
 
-    # except for manifest.yaml and build-args.conf
-    git checkout -- manifest.yaml build-args.conf
+    # except for manifest.yaml
+    git checkout -- manifest.yaml
 
-    # take BUILDER_IMG from the src branch version of build-args.conf
-    builder_img=$(git show "${fetch_head}:build-args.conf" | grep '^BUILDER_IMG=')
-
-    # replace that line in the now reverted file to promote only BUILDER_IMG
-    sed -i "s|^BUILDER_IMG=.*|${builder_img}|" build-args.conf
+    # and except for the STREAM/DESCRIPTION in build-args.conf we saved off before
+    sed -i "s|^STREAM=.*|${stream}|" build-args.conf
+    sed -i "s|^DESCRIPTION=.*|${description}|" build-args.conf
 
     # also strip out the snoozes and warns in the denylist because we don't
     # want changes in the executed tests over time for production streams
