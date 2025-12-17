@@ -30,8 +30,8 @@ main() {
     head=$(git rev-parse HEAD)
 
     # Determine the STREAM/DESCRIPTION from the target branch build-args.conf
-    stream=$(git show "${fetch_head}:build-args.conf" | grep '^STREAM=')
-    description=$(git show "${fetch_head}:build-args.conf" | grep '^DESCRIPTION=')
+    stream=$(grep '^STREAM=' build-args.conf)
+    description=$(grep '^DESCRIPTION=' build-args.conf)
 
     # take all the changes from the src branch, including any submodules
     git reset --hard "${fetch_head}"
