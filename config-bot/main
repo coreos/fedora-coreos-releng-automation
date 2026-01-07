@@ -260,7 +260,7 @@ async def propagate_files(cfg):
 
             # get the list of files from the source ref
             all_files = git.cmd_output('ls-tree', source_ref,
-                                       '--name-only').splitlines()
+                                       '-r', '--name-only').splitlines()
             files_to_import = [f for f in all_files
                                if not matches_patterns(f, skip_files)]
 
@@ -292,7 +292,7 @@ async def propagate_files(cfg):
                 # this by first deleting all the files, then importing the new
                 # files.
                 all_files = git.cmd_output('ls-tree', target_ref,
-                                           '--name-only').splitlines()
+                                           '-r', '--name-only').splitlines()
                 files_to_delete = [f for f in all_files
                                    if not matches_patterns(f, ref_skip_files)]
 
