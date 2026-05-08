@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:43
+FROM quay.io/fedora/fedora:44
 
 RUN dnf -y install git python3-aiohttp && dnf clean all
 
