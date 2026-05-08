@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:43
+FROM quay.io/fedora/fedora:44
 
 # set PYTHONUNBUFFERED env var to non-empty string so that our
 # output immediately comes to the console
