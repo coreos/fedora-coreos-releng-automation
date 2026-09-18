@@ -186,8 +186,11 @@ def prune_compose_repo(test=False):
     logger.info(f'Pruning the compose repo {OSTREECOMPOSEREPO}'
                 f' with policy {COMPOSE_REPO_POLICY}')
     prunearg = pruning_policy_to_args(COMPOSE_REPO_POLICY)
-    cmd = ['ostree', 'prune', '--repo', OSTREECOMPOSEREPO,
-           '--refs-only', prunearg]
+    # Note add --keep-unreferenced-younger-than arg to prevent deleted
+    # recently created commits before they are signed
+    # https://forge.fedoraproject.org/releng/tickets/issues/13509
+    cmd = ['ostree', 'prune', '--repo', OSTREECOMPOSEREPO, '--refs-only',
+           '--keep-unreferenced-younger-than="1 day ago"', prunearg]
     if test:
         cmd.append('--no-prune')
     runcmd(cmd)
