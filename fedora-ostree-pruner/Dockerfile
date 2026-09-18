@@ -10,6 +10,15 @@ RUN dnf update -y
 # Install ostree/dumb-init/python3
 RUN dnf -y install ostree dumb-init python3
 
+# Workaround https://forge.fedoraproject.org/releng/tickets/issues/13509
+# by pulling in ostree build with https://github.com/ostreedev/ostree/pull/3658
+RUN <<EOF
+    set -eux -o pipefail
+    if [ "$(rpm -q --qf '%{NVR}' ostree)" == 'ostree-2026.4-1.fc44' ]; then
+        dnf install -y https://kojipkgs.fedoraproject.org//work/tasks/5545/150335545/ostree{,-libs}-2026.4-2.fc44.x86_64.rpm
+    fi
+EOF
+
 # Configure a umask of 0002 which will allow for the group permissions
 # to include write for newly created files. We need this because we'd
 # like to access the OSTree repos from two different Kubernetes pods,
