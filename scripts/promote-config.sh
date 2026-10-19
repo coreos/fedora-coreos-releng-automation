@@ -29,9 +29,10 @@ main() {
     fi
     head=$(git rev-parse HEAD)
 
-    # Determine the STREAM/DESCRIPTION from the target branch build-args.conf
+    # Determine the STREAM/DESCRIPTION/COMPONENT from the target branch build-args.conf
     stream=$(grep '^STREAM=' build-args.conf)
     description=$(grep '^DESCRIPTION=' build-args.conf)
+    component=$(grep '^COMPONENT=' build-args.conf)
 
     # take all the changes from the src branch, including any submodules
     git reset --hard "${fetch_head}"
@@ -41,9 +42,10 @@ main() {
     # except for manifest.yaml
     git checkout -- manifest.yaml
 
-    # and except for the STREAM/DESCRIPTION in build-args.conf we saved off before
+    # and except for the STREAM/DESCRIPTION/COMPONENT in build-args.conf we saved off before
     sed -i "s|^STREAM=.*|${stream}|" build-args.conf
     sed -i "s|^DESCRIPTION=.*|${description}|" build-args.conf
+    sed -i "s|^COMPONENT=.*|${component}|" build-args.conf
 
     # also strip out the snoozes and warns in the denylist because we don't
     # want changes in the executed tests over time for production streams
